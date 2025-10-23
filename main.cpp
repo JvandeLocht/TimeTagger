@@ -6,27 +6,7 @@ using namespace std;
 using namespace chrono;
 
 void insertTimestamp(sqlite3 *db, const string &timezone, int64_t unix_ts,
-                     const string &readable) {
-  const char *sql =
-      "INSERT INTO timestamps (timezone, timestamp_unix, timestamp_readable) "
-      "VALUES (?, ?, ?);";
-
-  sqlite3_stmt *stmt;
-
-  if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) == SQLITE_OK) {
-    sqlite3_bind_text(stmt, 1, timezone.c_str(), -1, SQLITE_STATIC);
-    sqlite3_bind_int64(stmt, 2, unix_ts);
-    sqlite3_bind_text(stmt, 3, readable.c_str(), -1, SQLITE_STATIC);
-
-    if (sqlite3_step(stmt) == SQLITE_DONE) {
-      cout << timezone << " timestamp saved: " << readable << endl;
-    } else {
-      cerr << "Insert failed: " << sqlite3_errmsg(db) << endl;
-    }
-
-    sqlite3_finalize(stmt);
-  }
-}
+                     const string &readable);
 
 int main() {
   sqlite3 *db;
@@ -49,13 +29,8 @@ int main() {
   auto now = system_clock::now();
   auto unix_timestamp = duration_cast<seconds>(now.time_since_epoch()).count();
 
-  // Get specific timezone
-  auto berlin_tz = locate_zone("Europe/Berlin");
-
   // Convert to zoned_time
-  auto berlin_time = zoned_time{berlin_tz, now};
-
-  cout << format("Berlin: {:%Y-%m-%d %H:%M}\n", berlin_time);
+  auto berlin_time = zoned_time{locate_zone("Europe/Berlin"), now};
 
   string berlin_readable = format("{:%Y-%m-%d %H:%M}", berlin_time);
 
@@ -64,4 +39,27 @@ int main() {
   sqlite3_close(db);
 
   return 0;
+}
+
+void insertTimestamp(sqlite3 *db, const string &timezone, int64_t unix_ts,
+                     const string &readable) {
+  const char *sql =
+      "INSERT INTO timestamps (timezone, timestamp_unix, timestamp_readable) "
+      "VALUES (?, ?, ?);";
+
+  sqlite3_stmt *stmt;
+
+  if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) == SQLITE_OK) {
+    sqlite3_bind_text(stmt, 1, timezone.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_int64(stmt, 2, unix_ts);
+    sqlite3_bind_text(stmt, 3, readable.c_str(), -1, SQLITE_STATIC);
+
+    if (sqlite3_step(stmt) == SQLITE_DONE) {
+      cout << timezone << " timestamp saved: " << readable << endl;
+    } else {
+      cerr << "Insert failed: " << sqlite3_errmsg(db) << endl;
+    }
+
+    sqlite3_finalize(stmt);
+  }
 }
