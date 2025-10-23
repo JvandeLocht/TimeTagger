@@ -56,10 +56,12 @@
             export CMAKE_CXX_STANDARD_REQUIRED=ON
 
             # Create aliases for direct compiler use with C++20
-            alias g++='g++ -std=c++20'
-            alias gcc='gcc -std=c++20'
+            alias g++='g++ -std=c++20 -lsqlite3'
+            alias gcc='gcc -std=c++20 -lsqlite3'
+            alias sqlite3='sqlite3 -cmd ".mode box" -cmd ".headers on"'
 
-            echo "Note: g++ and gcc aliases set to use -std=c++20 by default"
+            echo "Note: g++ and gcc aliases set to use -std=c++20 -lsqlite3 by default"
+            echo "Note: sqlite3 aliases set to use -cmd ".mode box" -cmd ".headers on" by default"
           '';
         };
       }
