@@ -31,39 +31,56 @@ public:
 
   // Display method
   void print() const;
-
-  // Save to database
-  bool saveToDatabase(sqlite3 *db) const;
 };
 
+class DatabaseManager {
+private:
+  sqlite3 *db_;
+  string filepath_;
+
+public:
+  DatabaseManager(const string &filepath);
+  ~DatabaseManager();
+
+  bool connect();
+  bool createTable();
+  bool insertTimestamp(string timezone, string formatedTimestamp, string type);
+  string getLastError() const;
+};
+
+//================================================================================
+//================================================================================
+
 int main() {
-  sqlite3 *db;
   const string TIMEZONE = "Europe/Berlin";
 
-  if (sqlite3_open("timestamps.db", &db) != SQLITE_OK) {
-    cerr << "Can't open database: " << sqlite3_errmsg(db) << endl;
+  DatabaseManager dbManager("timestamps.db");
+
+  if (dbManager.connect() != true) {
+    cout << "Can't open database: " << dbManager.getLastError() << endl;
     return 1;
   }
 
-  // Create table with type column
-  const char *createTableSQL = "CREATE TABLE IF NOT EXISTS timestamps ("
-                               "id INTEGER PRIMARY KEY AUTOINCREMENT,"
-                               "timezone TEXT NOT NULL,"
-                               "timestamp TEXT NOT NULL,"
-                               "type TEXT NOT NULL,"
-                               "created_at DATETIME DEFAULT CURRENT_TIMESTAMP"
-                               ");";
-
-  sqlite3_exec(db, createTableSQL, nullptr, nullptr, nullptr);
+  if (dbManager.createTable() != true) {
+    cout << "Can't create Table: " << dbManager.getLastError() << endl;
+    return 1;
+  }
 
   // Create and save timestamp
   Timestamp ts(TIMEZONE);
   ts.print();
-  ts.saveToDatabase(db);
 
-  sqlite3_close(db);
+  if (dbManager.insertTimestamp(ts.getTimezone(), ts.getFormattedTime(),
+                                ts.getTypeString()) != true) {
+    cout << "Can't insert Timestamp: " << dbManager.getLastError() << endl;
+    return 1;
+  }
+
   return 0;
 }
+
+//================================================================================
+//================================================================================
 
 Timestamp::Timestamp(const string &timezone)
     : timezone_(timezone),
@@ -95,28 +112,69 @@ void Timestamp::print() const {
   cout << "Type: " << getTypeString() << endl;
 }
 
-bool Timestamp::saveToDatabase(sqlite3 *db) const {
+DatabaseManager::DatabaseManager(const string &filepath)
+    : db_(nullptr), filepath_(filepath) {}
+
+DatabaseManager::~DatabaseManager() {
+  if (db_ != nullptr) {
+    sqlite3_errmsg(db_);
+    db_ = nullptr;
+  }
+}
+
+bool DatabaseManager::connect() {
+  if (sqlite3_open(filepath_.c_str(), &db_) != SQLITE_OK) {
+    return false;
+  }
+  return true;
+};
+
+bool DatabaseManager::createTable() {
+  const char *createTableSQL = "CREATE TABLE IF NOT EXISTS timestamps ("
+                               "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                               "timezone TEXT NOT NULL,"
+                               "timestamp TEXT NOT NULL,"
+                               "type TEXT NOT NULL,"
+                               "created_at DATETIME DEFAULT CURRENT_TIMESTAMP"
+                               ");";
+
+  if (sqlite3_exec(db_, createTableSQL, nullptr, nullptr, nullptr) ==
+      SQLITE_ABORT) {
+    return false;
+  } else {
+    return true;
+  }
+};
+
+bool DatabaseManager::insertTimestamp(string timezone, string formatedTimestamp,
+                                      string type) {
   const char *sql = "INSERT INTO timestamps (timezone, timestamp, type) "
                     "VALUES (?, ?, ?);";
 
   sqlite3_stmt *stmt;
-  bool success = false;
 
-  if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) == SQLITE_OK) {
-    sqlite3_bind_text(stmt, 1, timezone_.c_str(), -1, SQLITE_STATIC);
-    sqlite3_bind_text(stmt, 2, formatted_time_.c_str(), -1, SQLITE_STATIC);
-    sqlite3_bind_text(stmt, 3, getTypeString().c_str(), -1, SQLITE_STATIC);
+  if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) == SQLITE_OK) {
+    sqlite3_bind_text(stmt, 1, timezone.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 2, formatedTimestamp.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 3, type.c_str(), -1, SQLITE_STATIC);
 
     if (sqlite3_step(stmt) == SQLITE_DONE) {
-      cout << getTypeString() << " timestamp saved: " << formatted_time_
-           << endl;
-      success = true;
+      cout << type << " timestamp saved: " << formatedTimestamp << endl;
+      return true;
     } else {
-      cerr << "Insert failed: " << sqlite3_errmsg(db) << endl;
+      return false;
     }
 
     sqlite3_finalize(stmt);
+  } else {
+    return false;
   }
+}
 
-  return success;
+string DatabaseManager::getLastError() const {
+  if (db_ != nullptr) {
+    return sqlite3_errmsg(db_);
+  } else {
+    return "Database not connected!";
+  }
 }
