@@ -3,6 +3,7 @@
 #include <iostream>
 #include <sqlite3.h>
 #include <string>
+#include <unordered_map>
 using namespace std;
 using namespace chrono;
 
@@ -10,6 +11,10 @@ enum class TimestampType {
   KOMMEN, // Arriving (before 9 AM)
   GEHEN   // Leaving (after 9 AM)
 };
+
+enum class Command { HELP, QUIT, TIMESTAMP, UNKNOWN };
+
+Command parseCommand(const string &cmd);
 
 class Timestamp {
 private:
@@ -57,8 +62,10 @@ public:
 
 int main() {
   const string TIMEZONE = "Europe/Berlin";
+  string input;
 
   DatabaseManager dbManager("timestamps.db");
+  Timestamp ts(TIMEZONE);
 
   if (dbManager.connect() != true) {
     cout << "Can't open database: " << dbManager.getLastError() << endl;
@@ -70,14 +77,30 @@ int main() {
     return 1;
   }
 
-  // Create and save timestamp
-  Timestamp ts(TIMEZONE);
-  ts.print();
+  while (true) {
+    cout << "> ";
+    getline(cin, input);
 
-  if (dbManager.insertTimestamp(ts.getTimezone(), ts.getFormattedTime(),
-                                ts.getTypeString()) != true) {
-    cout << "Can't insert Timestamp: " << dbManager.getLastError() << endl;
-    return 1;
+    istringstream iss(input);
+    string cmdStr;
+    iss >> cmdStr;
+
+    switch (parseCommand(cmdStr)) {
+    case Command::HELP:
+      cout << "Available commands: help, timestamp, quit\n";
+      break;
+
+    case Command::QUIT:
+      return 0;
+
+    case Command::TIMESTAMP:
+      ts.print();
+      break;
+
+    case Command::UNKNOWN:
+      cout << "Unknown command. Type 'help' for options.\n";
+      break;
+    }
   }
 
   return 0;
@@ -179,4 +202,16 @@ string DatabaseManager::getLastError() const {
   } else {
     return "Database not connected!";
   }
+}
+
+Command parseCommand(const string &cmd) {
+  static unordered_map<string, Command> cmdMap = {
+      {"help", Command::HELP},
+      {"quit", Command::QUIT},
+      {"q", Command::QUIT},
+      {"timestamp", Command::TIMESTAMP},
+  };
+
+  auto it = cmdMap.find(cmd);
+  return (it != cmdMap.end()) ? it->second : Command::UNKNOWN;
 }
