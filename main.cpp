@@ -121,7 +121,7 @@ DatabaseManager::DatabaseManager(const string &filepath)
 
 DatabaseManager::~DatabaseManager() {
   if (db_ != nullptr) {
-    sqlite3_errmsg(db_);
+    sqlite3_close(db_);
     db_ = nullptr;
   }
 }
