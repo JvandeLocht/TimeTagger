@@ -162,14 +162,12 @@ bool DatabaseManager::insertTimestamp(string timezone, string formatedTimestamp,
     sqlite3_bind_text(stmt, 2, formatedTimestamp.c_str(), -1, SQLITE_STATIC);
     sqlite3_bind_text(stmt, 3, type.c_str(), -1, SQLITE_STATIC);
 
-    if (sqlite3_step(stmt) == SQLITE_DONE) {
-      cout << type << " timestamp saved: " << formatedTimestamp << endl;
-      return true;
-    } else {
-      return false;
-    }
-
+    bool success = (sqlite3_step(stmt) == SQLITE_DONE);
     sqlite3_finalize(stmt);
+    if (success) {
+      cout << type << " timestamp saved: " << formatedTimestamp << endl;
+    }
+    return success;
   } else {
     return false;
   }
