@@ -42,6 +42,10 @@ public:
   DatabaseManager(const string &filepath);
   ~DatabaseManager();
 
+  // Prevent copying (database connections shouldn't be copied)
+  DatabaseManager(const DatabaseManager &) = delete;
+  DatabaseManager &operator=(const DatabaseManager &) = delete;
+
   bool connect();
   bool createTable();
   bool insertTimestamp(string timezone, string formatedTimestamp, string type);
