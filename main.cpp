@@ -12,7 +12,7 @@ enum class TimestampType {
   GEHEN   // Leaving (after 9 AM)
 };
 
-enum class Command { HELP, QUIT, TIMESTAMP, UNKNOWN };
+enum class Command { HELP, QUIT, TIMESTAMP, PRINT, UNKNOWN };
 
 Command parseCommand(const string &cmd);
 
@@ -98,6 +98,10 @@ int main() {
       if (ts.createTimestamp() != true) {
         cout << "Couldnt create Timestamp!" << endl;
       }
+      ts.print();
+      break;
+
+    case Command::PRINT:
       ts.print();
       break;
 
@@ -214,9 +218,13 @@ string DatabaseManager::getLastError() const {
 Command parseCommand(const string &cmd) {
   static unordered_map<string, Command> cmdMap = {
       {"help", Command::HELP},
+      {"h", Command::HELP},
       {"quit", Command::QUIT},
       {"q", Command::QUIT},
+      {"p", Command::PRINT},
+      {"print", Command::PRINT},
       {"timestamp", Command::TIMESTAMP},
+      {"t", Command::TIMESTAMP},
   };
 
   auto it = cmdMap.find(cmd);
