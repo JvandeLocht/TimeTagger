@@ -19,7 +19,7 @@ Command parseCommand(const string &cmd);
 class Timestamp {
 private:
   string timezone_;
-  zoned_time<system_clock::duration> zoned_time_;
+  // zoned_time<system_clock::duration> zoned_time_;
   TimestampType type_;
   string formatted_time_;
 
@@ -36,6 +36,7 @@ public:
 
   // Display method
   void print() const;
+  bool createTimestamp();
 };
 
 class DatabaseManager {
@@ -94,6 +95,9 @@ int main() {
       return 0;
 
     case Command::TIMESTAMP:
+      if (ts.createTimestamp() != true) {
+        cout << "Couldnt create Timestamp!" << endl;
+      }
       ts.print();
       break;
 
@@ -109,9 +113,18 @@ int main() {
 //================================================================================
 //================================================================================
 
-Timestamp::Timestamp(const string &timezone)
-    : timezone_(timezone),
-      zoned_time_(locate_zone(timezone), system_clock::now()) {
+Timestamp::Timestamp(const string &timezone) : timezone_(timezone) {}
+
+string Timestamp::getTimezone() const { return timezone_; }
+string Timestamp::getFormattedTime() const { return formatted_time_; }
+TimestampType Timestamp::getType() const { return type_; }
+
+string Timestamp::getTypeString() const {
+  return (type_ == TimestampType::KOMMEN) ? "Kommen" : "Gehen";
+}
+
+bool Timestamp::createTimestamp() {
+  auto zoned_time_ = zoned_time(locate_zone(timezone_), system_clock::now());
 
   // Determine type based on hour
   auto local_time = zoned_time_.get_local_time();
@@ -123,14 +136,8 @@ Timestamp::Timestamp(const string &timezone)
 
   // Format the timestamp
   formatted_time_ = format("{:%Y-%m-%d %H:%M:%S}", zoned_time_);
-}
 
-string Timestamp::getTimezone() const { return timezone_; }
-string Timestamp::getFormattedTime() const { return formatted_time_; }
-TimestampType Timestamp::getType() const { return type_; }
-
-string Timestamp::getTypeString() const {
-  return (type_ == TimestampType::KOMMEN) ? "Kommen" : "Gehen";
+  return true;
 }
 
 void Timestamp::print() const {
