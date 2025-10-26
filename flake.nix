@@ -64,6 +64,40 @@
             echo "Note: sqlite3 aliases set to use -cmd ".mode box" -cmd ".headers on" by default"
           '';
         };
+
+        packages.default = pkgs.gcc15Stdenv.mkDerivation {
+          pname = "timing-tool";
+          version = "0.1.0";
+
+          src = ./.;
+
+          nativeBuildInputs = with pkgs; [
+            cmake
+          ];
+
+          buildInputs = with pkgs; [
+            sqlite
+          ];
+
+          # CMake flags
+          cmakeFlags = [
+            "-DCMAKE_BUILD_TYPE=Release"
+          ];
+
+          installPhase = ''
+            mkdir -p $out/bin
+            cp timing-tool $out/bin/
+          '';
+
+          meta = {
+            description = "A C++20 timing tool for tracking Kommen/Gehen timestamps";
+            license = pkgs.lib.licenses.mit;
+          };
+        };
+        apps.default = {
+          type = "app";
+          program = "${self.packages.${system}.default}/bin/timing-tool";
+        };
       }
     );
 }
