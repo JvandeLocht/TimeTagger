@@ -1,4 +1,5 @@
 #include "DatabaseManager.h"
+#include <cstdlib>
 #include <iostream>
 #include <string>
 
@@ -36,6 +37,13 @@ bool DatabaseManager::createTable() {
     } else {
         return true;
     }
+};
+
+void DatabaseManager::printTableShell() {
+    string command = "sqlite3 -cmd '.mode box' -cmd '.headers on' " +
+                     filepath_ + " 'SELECT * FROM timestamps;'";
+
+    system(command.c_str());
 };
 
 bool DatabaseManager::insertTimestamp(string timezone, string formatedTimestamp,

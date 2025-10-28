@@ -16,6 +16,7 @@ class DatabaseManager {
 
     bool connect();
     bool createTable();
+    void printTableShell();
     bool insertTimestamp(std::string timezone, std::string formatedTimestamp,
                          std::string type);
     std::string getLastError() const;

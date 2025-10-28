@@ -12,6 +12,9 @@ Command parseCommand(const std::string &cmd) {
         {"print", Command::PRINT},
         {"timestamp", Command::TIMESTAMP},
         {"t", Command::TIMESTAMP},
+        {"d", Command::WRITE_DB},
+        {"writeDB", Command::WRITE_DB},
+        {"pd", Command::PRINT_DB_SHELL},
     };
 
     auto it = cmdMap.find(cmd);
