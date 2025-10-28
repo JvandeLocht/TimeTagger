@@ -2,9 +2,7 @@
 #include "DatabaseManager.h"
 #include "Timestamp.h"
 #include <iostream>
-#include <sqlite3.h>
 #include <sstream>
-#include <string>
 
 using namespace std;
 
