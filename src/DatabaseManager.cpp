@@ -1,4 +1,5 @@
 #include "DatabaseManager.h"
+#include <chrono>
 #include <cstdlib>
 #include <iostream>
 #include <string>
@@ -76,4 +77,60 @@ string DatabaseManager::getLastError() const {
     } else {
         return "Database not connected!";
     }
+}
+
+chrono::system_clock::time_point
+DatabaseManager::parseTimestamp(const string &timestamp_str) const {
+    istringstream ss(timestamp_str);
+    chrono::system_clock::time_point timepoint;
+    from_stream(ss, "%Y-%m-%d %H:%M:%S", timepoint);
+    return timepoint;
+}
+
+WorkingHours DatabaseManager::calculateDailyHours(const string &date) {
+    WorkingHours result{date, 0.0, 0, 0};
+
+    const char *sql = "SELECT timestamp, type FROM timestamps "
+                      "WHERE DATE(timestamp) = ? "
+                      "ORDER BY timestamp ASC;";
+
+    sqlite3_stmt *stmt;
+
+    if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+        return result;
+    }
+
+    sqlite3_bind_text(stmt, 1, date.c_str(), -1, SQLITE_STATIC);
+
+    vector<chrono::system_clock::time_point> kommen_times;
+    vector<chrono::system_clock::time_point> gehen_times;
+
+    while (sqlite3_step(stmt) == SQLITE_ROW) {
+        const char *timestamp_str =
+            reinterpret_cast<const char *>(sqlite3_column_text(stmt, 0));
+        const char *type_str =
+            reinterpret_cast<const char *>(sqlite3_column_text(stmt, 1));
+
+        auto timepoint = parseTimestamp(timestamp_str);
+
+        if (string(type_str) == "Kommen") {
+            kommen_times.push_back(timepoint);
+        } else {
+            gehen_times.push_back(timepoint);
+        }
+    }
+
+    sqlite3_finalize(stmt);
+
+    result.kommen_count = kommen_times.size();
+    result.gehen_count = gehen_times.size();
+
+    // Calculate hours by pairing Kommen with Gehen
+    size_t number_of_pairs = min(kommen_times.size(), gehen_times.size());
+    for (size_t i = 0; i < number_of_pairs; ++i) {
+        auto duration = gehen_times[i] - kommen_times[i];
+        result.hours += duration_cast<chrono::minutes>(duration).count() / 60.0;
+    }
+
+    return result;
 }
