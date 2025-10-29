@@ -18,12 +18,18 @@ int main() {
         return 1;
     }
 
-    if (dbManager.createTable() != true) {
+    if (dbManager.createTableTimestamps() != true) {
         cout << "Can't create Table: " << dbManager.getLastError() << endl;
         return 1;
     }
 
-    cout << dbManager.calculateDailyHours("2025-10-28").hours << endl;
+    if (dbManager.createTableDailyHours() != true) {
+        cout << "Can't create Table: " << dbManager.getLastError() << endl;
+        return 1;
+    }
+
+    // cout << dbManager.calculateDailyHours("2025-10-28").hours << endl;
+    dbManager.populateDailyHours();
     // while (true) {
     //   cout << "> ";
     //   getline(cin, input);

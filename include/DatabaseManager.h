@@ -26,7 +26,9 @@ class DatabaseManager {
     DatabaseManager &operator=(const DatabaseManager &) = delete;
 
     bool connect();
-    bool createTable();
+    bool createTableTimestamps();
+    bool createTableDailyHours();
+    bool populateDailyHours();
     void printTableShell();
     bool insertTimestamp(std::string timezone, std::string formatedTimestamp,
                          std::string type);

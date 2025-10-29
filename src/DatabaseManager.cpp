@@ -23,13 +23,28 @@ bool DatabaseManager::connect() {
     return true;
 };
 
-bool DatabaseManager::createTable() {
+bool DatabaseManager::createTableTimestamps() {
     const char *createTableSQL = "CREATE TABLE IF NOT EXISTS timestamps ("
                                  "id INTEGER PRIMARY KEY AUTOINCREMENT,"
                                  "timezone TEXT NOT NULL,"
                                  "timestamp TEXT NOT NULL,"
                                  "type TEXT NOT NULL,"
                                  "created_at DATETIME DEFAULT CURRENT_TIMESTAMP"
+                                 ");";
+
+    if (sqlite3_exec(db_, createTableSQL, nullptr, nullptr, nullptr) ==
+        SQLITE_ABORT) {
+        return false;
+    } else {
+        return true;
+    }
+};
+
+bool DatabaseManager::createTableDailyHours() {
+    const char *createTableSQL = "CREATE TABLE IF NOT EXISTS dailyhours ("
+                                 "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                                 "date TEXT NOT NULL,"
+                                 "hours TEXT NOT NULL"
                                  ");";
 
     if (sqlite3_exec(db_, createTableSQL, nullptr, nullptr, nullptr) ==
@@ -133,4 +148,47 @@ WorkingHours DatabaseManager::calculateDailyHours(const string &date) {
     }
 
     return result;
+}
+
+bool DatabaseManager::populateDailyHours() {
+    const char *sqlDailyHours = "INSERT INTO dailyhours (date, hours) "
+                                "VALUES (?, ?);";
+    const char *sqlDates = "SELECT DISTINCT DATE(timestamp) AS date "
+                           "FROM timestamps "
+                           "ORDER BY date;";
+
+    sqlite3_stmt *stmtDailyHours;
+    sqlite3_stmt *stmtDates;
+
+    vector<string> dates;
+
+    if (sqlite3_prepare_v2(db_, sqlDates, -1, &stmtDates, nullptr) !=
+        SQLITE_OK) {
+        return false;
+    }
+
+    while (sqlite3_step(stmtDates) == SQLITE_ROW) {
+        const char *date =
+            reinterpret_cast<const char *>(sqlite3_column_text(stmtDates, 0));
+
+        dates.push_back(date);
+    }
+    sqlite3_finalize(stmtDates);
+
+    for (const auto &day : dates) {
+        string workHour = format("{}", calculateDailyHours(day).hours);
+        if (sqlite3_prepare_v2(db_, sqlDailyHours, -1, &stmtDailyHours,
+                               nullptr) == SQLITE_OK) {
+            sqlite3_bind_text(stmtDailyHours, 1, day.c_str(), -1,
+                              SQLITE_STATIC);
+            sqlite3_bind_text(stmtDailyHours, 2, workHour.c_str(), -1,
+                              SQLITE_STATIC);
+
+            sqlite3_step(stmtDailyHours);
+            sqlite3_finalize(stmtDailyHours);
+        } else {
+            return false;
+        }
+    }
+    return true;
 }
