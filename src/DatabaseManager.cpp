@@ -70,10 +70,10 @@ bool DatabaseManager::insertTimestamp(string timezone, string formatedTimestamp,
     sqlite3_stmt *stmt;
 
     if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) == SQLITE_OK) {
-        sqlite3_bind_text(stmt, 1, timezone.c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_text(stmt, 1, timezone.c_str(), -1, SQLITE_TRANSIENT);
         sqlite3_bind_text(stmt, 2, formatedTimestamp.c_str(), -1,
-                          SQLITE_STATIC);
-        sqlite3_bind_text(stmt, 3, type.c_str(), -1, SQLITE_STATIC);
+                          SQLITE_TRANSIENT);
+        sqlite3_bind_text(stmt, 3, type.c_str(), -1, SQLITE_TRANSIENT);
 
         bool success = (sqlite3_step(stmt) == SQLITE_DONE);
         sqlite3_finalize(stmt);
@@ -117,7 +117,7 @@ WorkingHours DatabaseManager::calculateDailyHours(const string &date) {
         return result;
     }
 
-    sqlite3_bind_text(stmt, 1, date.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 1, date.c_str(), -1, SQLITE_TRANSIENT);
 
     vector<chrono::system_clock::time_point> kommen_times;
     vector<chrono::system_clock::time_point> gehen_times;
@@ -186,9 +186,9 @@ bool DatabaseManager::populateDailyHours() {
         if (sqlite3_prepare_v2(db_, sqlDailyHours, -1, &stmtDailyHours,
                                nullptr) == SQLITE_OK) {
             sqlite3_bind_text(stmtDailyHours, 1, day.c_str(), -1,
-                              SQLITE_STATIC);
+                              SQLITE_TRANSIENT);
             sqlite3_bind_text(stmtDailyHours, 2, workHour.c_str(), -1,
-                              SQLITE_STATIC);
+                              SQLITE_TRANSIENT);
 
             sqlite3_step(stmtDailyHours);
             sqlite3_finalize(stmtDailyHours);
