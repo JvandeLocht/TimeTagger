@@ -102,7 +102,9 @@ DatabaseManager::parseTimestamp(const string &timestamp_str) const {
 }
 
 WorkingHours DatabaseManager::calculateDailyHours(const string &date) {
-  WorkingHours result{date, 0.0, 0, 0};
+  WorkingHours result{date, 0.0, 0, 0, 0, 0};
+  result.workBreak = 0.5;
+  result.minHoursForWorkBreak = 6;
 
   const char *sql = "SELECT timestamp, type FROM timestamps "
                     "WHERE DATE(timestamp) = ? "
@@ -145,8 +147,8 @@ WorkingHours DatabaseManager::calculateDailyHours(const string &date) {
     auto duration = gehen_times[i] - kommen_times[i];
     result.hours += duration_cast<chrono::minutes>(duration).count() / 60.0;
   }
-  if (result.hours >= 6.0) {
-    result.hours = result.hours - 0.5; // substract the brake
+  if (result.hours >= result.minHoursForWorkBreak) {
+    result.hours = result.hours - result.workBreak;
   }
 
   return result;

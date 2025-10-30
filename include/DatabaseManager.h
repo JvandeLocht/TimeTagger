@@ -1,13 +1,7 @@
+#include <TimeManager.h>
 #include <chrono>
 #include <sqlite3.h>
 #include <string>
-
-struct WorkingHours {
-    std::string date;
-    double hours;
-    int kommen_count;
-    int gehen_count;
-};
 
 class DatabaseManager {
   private:

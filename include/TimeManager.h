@@ -5,14 +5,23 @@ enum class TimestampType {
     GEHEN   // Leaving (after 9 AM)
 };
 
-class Timestamp {
+struct WorkingHours {
+    std::string date;
+    double hours;
+    double workBreak;
+    double minHoursForWorkBreak;
+    int kommen_count;
+    int gehen_count;
+};
+
+class TimeManager {
   private:
     std::string timezone_;
     TimestampType type_;
     std::string formatted_time_;
 
   public:
-    Timestamp(const std::string &timezone);
+    TimeManager(const std::string &timezone);
 
     std::string getTimezone() const;
     std::string getFormattedTime() const;

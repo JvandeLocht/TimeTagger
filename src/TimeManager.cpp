@@ -1,4 +1,4 @@
-#include "Timestamp.h"
+#include "TimeManager.h"
 #include <chrono>
 #include <format>
 #include <iostream>
@@ -6,17 +6,17 @@
 using namespace std;
 using namespace chrono;
 
-Timestamp::Timestamp(const string &timezone) : timezone_(timezone) {}
+TimeManager::TimeManager(const string &timezone) : timezone_(timezone) {}
 
-string Timestamp::getTimezone() const { return timezone_; }
-string Timestamp::getFormattedTime() const { return formatted_time_; }
-TimestampType Timestamp::getType() const { return type_; }
+string TimeManager::getTimezone() const { return timezone_; }
+string TimeManager::getFormattedTime() const { return formatted_time_; }
+TimestampType TimeManager::getType() const { return type_; }
 
-string Timestamp::getTypeString() const {
+string TimeManager::getTypeString() const {
     return (type_ == TimestampType::KOMMEN) ? "Kommen" : "Gehen";
 }
 
-bool Timestamp::createTimestamp() {
+bool TimeManager::createTimestamp() {
     auto zoned_time_ = zoned_time(locate_zone(timezone_), system_clock::now());
 
     // Determine type based on hour
@@ -33,7 +33,7 @@ bool Timestamp::createTimestamp() {
     return true;
 }
 
-void Timestamp::print() const {
+void TimeManager::print() const {
     cout << "Timezone: " << timezone_ << endl;
     cout << "Time: " << formatted_time_ << endl;
     cout << "Type: " << getTypeString() << endl;
