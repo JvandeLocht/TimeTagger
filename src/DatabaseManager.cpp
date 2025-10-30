@@ -145,6 +145,9 @@ WorkingHours DatabaseManager::calculateDailyHours(const string &date) {
     auto duration = gehen_times[i] - kommen_times[i];
     result.hours += duration_cast<chrono::minutes>(duration).count() / 60.0;
   }
+  if (result.hours >= 6.0) {
+    result.hours = result.hours - 0.5; // substract the brake
+  }
 
   return result;
 }
