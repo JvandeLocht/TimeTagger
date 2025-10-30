@@ -28,8 +28,10 @@ int main() {
         return 1;
     }
 
-    // cout << dbManager.calculateDailyHours("2025-10-28").hours << endl;
-    dbManager.populateDailyHours();
+    if (!dbManager.populateDailyHours()) {
+        cout << "Warning: Failed to populate daily hours table" << endl;
+    }
+
     while (true) {
         cout << "> ";
         getline(cin, input);
