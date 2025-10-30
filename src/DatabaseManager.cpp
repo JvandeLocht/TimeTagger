@@ -156,8 +156,9 @@ WorkingHours DatabaseManager::calculateDailyHours(const string &date) {
 }
 
 bool DatabaseManager::populateDailyHours() {
-    const char *sqlDailyHours = "INSERT INTO dailyhours (date, hours) "
-                                "VALUES (?, ?);";
+    const char *sqlDailyHours =
+        "INSERT INTO dailyhours (date, hours) VALUES (?, ?) "
+        "ON CONFLICT(date) DO UPDATE SET hours = excluded.hours;";
     const char *sqlDates = "SELECT DISTINCT DATE(timestamp) AS date "
                            "FROM timestamps "
                            "ORDER BY date;";
