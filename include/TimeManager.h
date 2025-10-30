@@ -1,5 +1,7 @@
 #include <string>
 
+#pragma once
+
 enum class TimestampType {
     KOMMEN, // Arriving (before 9 AM)
     GEHEN   // Leaving (after 9 AM)

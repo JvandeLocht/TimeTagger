@@ -3,6 +3,8 @@
 #include <sqlite3.h>
 #include <string>
 
+#pragma once
+
 class DatabaseManager {
   private:
     sqlite3 *db_;

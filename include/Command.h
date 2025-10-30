@@ -1,5 +1,7 @@
 #include <string>
 
+#pragma once
+
 enum class Command {
     HELP,
     QUIT,
