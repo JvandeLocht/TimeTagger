@@ -11,7 +11,7 @@ int main() {
     string input;
 
     DatabaseManager dbManager("timestamps.db");
-    Timestamp ts(TIMEZONE);
+    TimeManager ts(TIMEZONE);
 
     if (dbManager.connect() != true) {
         cout << "Can't open database: " << dbManager.getLastError() << endl;
