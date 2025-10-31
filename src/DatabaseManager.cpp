@@ -1,7 +1,6 @@
 #include "DatabaseManager.h"
 #include <chrono>
 #include <cstdlib>
-#include <format>
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -45,7 +44,7 @@ bool DatabaseManager::createTableDailyHours() {
     const char *createTableSQL = "CREATE TABLE IF NOT EXISTS dailyhours ("
                                  "id INTEGER PRIMARY KEY AUTOINCREMENT,"
                                  "date TEXT NOT NULL UNIQUE,"
-                                 "hours TEXT NOT NULL"
+                                 "hours REAL NOT NULL"
                                  ");";
 
     if (sqlite3_exec(db_, createTableSQL, nullptr, nullptr, nullptr) !=
@@ -202,14 +201,12 @@ bool DatabaseManager::populateDailyHours() {
     sqlite3_finalize(stmtDates);
 
     for (const auto &day : dates) {
-        std::string workHour =
-            std::format("{}", calculateDailyHours(day).hours);
+        double workHour = calculateDailyHours(day).hours;
         if (sqlite3_prepare_v2(db_, sqlDailyHours, -1, &stmtDailyHours,
                                nullptr) == SQLITE_OK) {
             sqlite3_bind_text(stmtDailyHours, 1, day.c_str(), -1,
                               SQLITE_TRANSIENT);
-            sqlite3_bind_text(stmtDailyHours, 2, workHour.c_str(), -1,
-                              SQLITE_TRANSIENT);
+            sqlite3_bind_double(stmtDailyHours, 2, workHour);
 
             sqlite3_step(stmtDailyHours);
             sqlite3_finalize(stmtDailyHours);
