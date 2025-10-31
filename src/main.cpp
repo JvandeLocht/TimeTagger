@@ -30,10 +30,6 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  if (!dbManager.populateDailyHours()) {
-    std::cout << "Warning: Failed to populate daily hours table" << std::endl;
-  }
-
   app.add_flag("-t,--timestamp,--create-timestamp", create_timestamp,
                "Create a new timestamp (auto-detects check-in/check-out "
                "based on time)");
