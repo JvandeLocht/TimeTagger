@@ -22,7 +22,7 @@ bool DatabaseManager::connect() {
         return false;
     }
     return true;
-};
+}
 
 bool DatabaseManager::createTableTimestamps() {
     const char *createTableSQL = "CREATE TABLE IF NOT EXISTS timestamps ("
@@ -39,7 +39,7 @@ bool DatabaseManager::createTableTimestamps() {
     } else {
         return true;
     }
-};
+}
 
 bool DatabaseManager::createTableDailyHours() {
     const char *createTableSQL = "CREATE TABLE IF NOT EXISTS dailyhours ("
@@ -54,14 +54,14 @@ bool DatabaseManager::createTableDailyHours() {
     } else {
         return true;
     }
-};
+}
 
 void DatabaseManager::printTableShell() {
     std::string command = "sqlite3 -cmd '.mode box' -cmd '.headers on' " +
                           filepath_ + " 'SELECT * FROM timestamps;'";
 
     system(command.c_str());
-};
+}
 
 bool DatabaseManager::insertTimestamp(std::string timezone,
                                       std::string formatedTimestamp,
