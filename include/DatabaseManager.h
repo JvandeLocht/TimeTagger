@@ -1,5 +1,6 @@
 #include "TimeManager.h"
 #include <chrono>
+#include <optional>
 #include <sqlite3.h>
 #include <string>
 
@@ -10,7 +11,7 @@ class DatabaseManager {
     sqlite3 *db_;
     std::string filepath_;
 
-    std::chrono::system_clock::time_point
+    std::optional<std::chrono::system_clock::time_point>
     parseTimestamp(const std::string &timestamp_str) const;
 
   public:

@@ -97,11 +97,16 @@ std::string DatabaseManager::getLastError() const {
     }
 }
 
-std::chrono::system_clock::time_point
+std::optional<std::chrono::system_clock::time_point>
 DatabaseManager::parseTimestamp(const std::string &timestamp_str) const {
     std::istringstream ss(timestamp_str);
     std::chrono::system_clock::time_point timepoint;
     std::chrono::from_stream(ss, "%Y-%m-%d %H:%M:%S", timepoint);
+
+    if (ss.fail()) {
+        return std::nullopt;
+    }
+
     return timepoint;
 }
 
@@ -131,7 +136,17 @@ WorkingHours DatabaseManager::calculateDailyHours(const std::string &date) {
         const char *type_str =
             reinterpret_cast<const char *>(sqlite3_column_text(stmt, 1));
 
-        auto timepoint = parseTimestamp(timestamp_str);
+        auto timepoint_opt = parseTimestamp(timestamp_str);
+
+        if (!timepoint_opt) {
+            std::cerr << "Error: Invalid timestamp in database: "
+                      << timestamp_str << std::endl;
+            result.hours = -1.0;
+            sqlite3_finalize(stmt);
+            return result;
+        }
+
+        auto timepoint = *timepoint_opt;
 
         if (std::string(type_str) == "Kommen") {
             kommen_times.push_back(timepoint);
