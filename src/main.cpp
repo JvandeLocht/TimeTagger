@@ -3,34 +3,35 @@
 #include <CLI/CLI.hpp>
 #include <iostream>
 
-using namespace std;
-
 int main(int argc, char **argv) {
   CLI::App app{"TimeTagger - Track your working hours"};
 
-  const string TIMEZONE = "Europe/Berlin";
+  const std::string TIMEZONE = "Europe/Berlin";
   bool create_timestamp = false;
 
   DatabaseManager dbManager("timestamps.db");
   TimeManager ts(TIMEZONE);
 
   if (dbManager.connect() != true) {
-    cout << "Can't open database: " << dbManager.getLastError() << endl;
+    std::cout << "Can't open database: " << dbManager.getLastError()
+              << std::endl;
     return 1;
   }
 
   if (dbManager.createTableTimestamps() != true) {
-    cout << "Can't create Table: " << dbManager.getLastError() << endl;
+    std::cout << "Can't create Table: " << dbManager.getLastError()
+              << std::endl;
     return 1;
   }
 
   if (dbManager.createTableDailyHours() != true) {
-    cout << "Can't create Table: " << dbManager.getLastError() << endl;
+    std::cout << "Can't create Table: " << dbManager.getLastError()
+              << std::endl;
     return 1;
   }
 
   if (!dbManager.populateDailyHours()) {
-    cout << "Warning: Failed to populate daily hours table" << endl;
+    std::cout << "Warning: Failed to populate daily hours table" << std::endl;
   }
 
   app.add_flag("-t,--timestamp,--create-timestamp", create_timestamp,
@@ -41,7 +42,7 @@ int main(int argc, char **argv) {
 
   if (create_timestamp) {
     if (!ts.createTimestamp()) {
-      cerr << "Error: Couldn't create timestamp!" << endl;
+      std::cerr << "Error: Couldn't create timestamp!" << std::endl;
       return 1;
     }
 
@@ -51,18 +52,18 @@ int main(int argc, char **argv) {
     // Save to database
     if (!dbManager.insertTimestamp(ts.getTimezone(), ts.getFormattedTime(),
                                    ts.getTypeString())) {
-      cerr << "Error: Failed to save timestamp to database" << endl;
+      std::cerr << "Error: Failed to save timestamp to database" << std::endl;
       return 1;
     }
 
     // Update daily hours
     if (!dbManager.populateDailyHours()) {
-      cerr << "Warning: Failed to update daily hours" << endl;
+      std::cerr << "Warning: Failed to update daily hours" << std::endl;
     }
   }
 
   if (argc == 1) {
-    cout << app.help() << endl;
+    std::cout << app.help() << std::endl;
     return 0;
   }
 

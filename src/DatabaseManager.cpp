@@ -4,9 +4,7 @@
 #include <iostream>
 #include <string>
 
-using namespace std;
-
-DatabaseManager::DatabaseManager(const string &filepath)
+DatabaseManager::DatabaseManager(const std::string &filepath)
     : db_(nullptr), filepath_(filepath) {}
 
 DatabaseManager::~DatabaseManager() {
@@ -56,14 +54,15 @@ bool DatabaseManager::createTableDailyHours() {
 };
 
 void DatabaseManager::printTableShell() {
-    string command = "sqlite3 -cmd '.mode box' -cmd '.headers on' " +
-                     filepath_ + " 'SELECT * FROM timestamps;'";
+    std::string command = "sqlite3 -cmd '.mode box' -cmd '.headers on' " +
+                          filepath_ + " 'SELECT * FROM timestamps;'";
 
     system(command.c_str());
 };
 
-bool DatabaseManager::insertTimestamp(string timezone, string formatedTimestamp,
-                                      string type) {
+bool DatabaseManager::insertTimestamp(std::string timezone,
+                                      std::string formatedTimestamp,
+                                      std::string type) {
     const char *sql = "INSERT INTO timestamps (timezone, timestamp, type) "
                       "VALUES (?, ?, ?);";
 
@@ -78,7 +77,8 @@ bool DatabaseManager::insertTimestamp(string timezone, string formatedTimestamp,
         bool success = (sqlite3_step(stmt) == SQLITE_DONE);
         sqlite3_finalize(stmt);
         if (success) {
-            cout << type << " timestamp saved: " << formatedTimestamp << endl;
+            std::cout << type << " timestamp saved: " << formatedTimestamp
+                      << std::endl;
         }
         return success;
     } else {
@@ -86,7 +86,7 @@ bool DatabaseManager::insertTimestamp(string timezone, string formatedTimestamp,
     }
 }
 
-string DatabaseManager::getLastError() const {
+std::string DatabaseManager::getLastError() const {
     if (db_ != nullptr) {
         return sqlite3_errmsg(db_);
     } else {
@@ -94,15 +94,15 @@ string DatabaseManager::getLastError() const {
     }
 }
 
-chrono::system_clock::time_point
-DatabaseManager::parseTimestamp(const string &timestamp_str) const {
-    istringstream ss(timestamp_str);
-    chrono::system_clock::time_point timepoint;
+std::chrono::system_clock::time_point
+DatabaseManager::parseTimestamp(const std::string &timestamp_str) const {
+    std::istringstream ss(timestamp_str);
+    std::chrono::system_clock::time_point timepoint;
     from_stream(ss, "%Y-%m-%d %H:%M:%S", timepoint);
     return timepoint;
 }
 
-WorkingHours DatabaseManager::calculateDailyHours(const string &date) {
+WorkingHours DatabaseManager::calculateDailyHours(const std::string &date) {
     WorkingHours result{date, 0.0, 0, 0, 0, 0};
     result.workBreak = 0.5;
     result.minHoursForWorkBreak = 6;
@@ -119,8 +119,8 @@ WorkingHours DatabaseManager::calculateDailyHours(const string &date) {
 
     sqlite3_bind_text(stmt, 1, date.c_str(), -1, SQLITE_TRANSIENT);
 
-    vector<chrono::system_clock::time_point> kommen_times;
-    vector<chrono::system_clock::time_point> gehen_times;
+    std::vector<std::chrono::system_clock::time_point> kommen_times;
+    std::vector<std::chrono::system_clock::time_point> gehen_times;
 
     while (sqlite3_step(stmt) == SQLITE_ROW) {
         const char *timestamp_str =
@@ -130,7 +130,7 @@ WorkingHours DatabaseManager::calculateDailyHours(const string &date) {
 
         auto timepoint = parseTimestamp(timestamp_str);
 
-        if (string(type_str) == "Kommen") {
+        if (std::string(type_str) == "Kommen") {
             kommen_times.push_back(timepoint);
         } else {
             gehen_times.push_back(timepoint);
@@ -143,10 +143,11 @@ WorkingHours DatabaseManager::calculateDailyHours(const string &date) {
     result.gehen_count = gehen_times.size();
 
     // Calculate hours by pairing Kommen with Gehen
-    size_t number_of_pairs = min(kommen_times.size(), gehen_times.size());
+    size_t number_of_pairs = std::min(kommen_times.size(), gehen_times.size());
     for (size_t i = 0; i < number_of_pairs; ++i) {
         auto duration = gehen_times[i] - kommen_times[i];
-        result.hours += duration_cast<chrono::minutes>(duration).count() / 60.0;
+        result.hours +=
+            duration_cast<std::chrono::minutes>(duration).count() / 60.0;
     }
     if (result.hours >= result.minHoursForWorkBreak) {
         result.hours = result.hours - result.workBreak;
@@ -166,7 +167,7 @@ bool DatabaseManager::populateDailyHours() {
     sqlite3_stmt *stmtDailyHours;
     sqlite3_stmt *stmtDates;
 
-    vector<string> dates;
+    std::vector<std::string> dates;
 
     if (sqlite3_prepare_v2(db_, sqlDates, -1, &stmtDates, nullptr) !=
         SQLITE_OK) {
@@ -182,7 +183,8 @@ bool DatabaseManager::populateDailyHours() {
     sqlite3_finalize(stmtDates);
 
     for (const auto &day : dates) {
-        string workHour = format("{}", calculateDailyHours(day).hours);
+        std::string workHour =
+            std::format("{}", calculateDailyHours(day).hours);
         if (sqlite3_prepare_v2(db_, sqlDailyHours, -1, &stmtDailyHours,
                                nullptr) == SQLITE_OK) {
             sqlite3_bind_text(stmtDailyHours, 1, day.c_str(), -1,
