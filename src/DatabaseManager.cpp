@@ -148,7 +148,7 @@ WorkingHours DatabaseManager::calculateDailyHours(const std::string &date) {
 
         auto timepoint = *timepoint_opt;
 
-        if (std::string(type_str) == "Kommen") {
+        if (std::string_view(type_str) == "Kommen") {
             kommen_times.push_back(timepoint);
         } else {
             gehen_times.push_back(timepoint);
