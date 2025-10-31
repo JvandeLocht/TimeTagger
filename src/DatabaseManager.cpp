@@ -1,8 +1,11 @@
 #include "DatabaseManager.h"
 #include <chrono>
 #include <cstdlib>
+#include <format>
 #include <iostream>
+#include <sstream>
 #include <string>
+#include <vector>
 
 DatabaseManager::DatabaseManager(const std::string &filepath)
     : db_(nullptr), filepath_(filepath) {}
