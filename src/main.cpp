@@ -14,6 +14,20 @@ int main(int argc, char **argv) {
   DatabaseManager dbManager("timestamps.db");
   TimeManager ts(TIMEZONE);
 
+  app.add_flag("-t,--timestamp,--create-timestamp", create_timestamp,
+               "Create a new timestamp (auto-detects check-in/check-out "
+               "based on time)");
+
+  app.add_flag("-k,--checkin", force_checkin, "Forces the type Kommen");
+  app.add_flag("-g,--checkout", force_checkout, "Forces the type Gehen");
+
+  CLI11_PARSE(app, argc, argv);
+
+  if (argc == 1) {
+    std::cout << app.help() << std::endl;
+    return 0;
+  }
+
   if (dbManager.connect() != true) {
     std::cout << "Can't open database: " << dbManager.getLastError()
               << std::endl;
@@ -31,15 +45,6 @@ int main(int argc, char **argv) {
               << std::endl;
     return 1;
   }
-
-  app.add_flag("-t,--timestamp,--create-timestamp", create_timestamp,
-               "Create a new timestamp (auto-detects check-in/check-out "
-               "based on time)");
-
-  app.add_flag("-k,--checkin", force_checkin, "Forces the type Kommen");
-  app.add_flag("-g,--checkout", force_checkout, "Forces the type Gehen");
-
-  CLI11_PARSE(app, argc, argv);
 
   if (create_timestamp) {
     if (force_checkin) {
@@ -67,11 +72,6 @@ int main(int argc, char **argv) {
     if (!dbManager.populateDailyHours()) {
       std::cerr << "Warning: Failed to update daily hours" << std::endl;
     }
-  }
-
-  if (argc == 1) {
-    std::cout << app.help() << std::endl;
-    return 0;
   }
 
   return 0;
