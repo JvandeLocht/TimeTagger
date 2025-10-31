@@ -16,6 +16,14 @@
       system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
+
+        pTimestamps = pkgs.writeShellScriptBin "pTimestamps" ''
+          ${pkgs.sqlite}/bin/sqlite3 -cmd ".mode box" -cmd ".headers on" timestamps.db "SELECT * FROM timestamps;"
+        '';
+
+        pDailyhours = pkgs.writeShellScriptBin "pDailyhours" ''
+          ${pkgs.sqlite}/bin/sqlite3 -cmd ".mode box" -cmd ".headers on" timestamps.db "SELECT * FROM dailyhours;"
+        '';
       in
       {
         devShells.default = pkgs.mkShell {
@@ -25,20 +33,14 @@
 
             # Build Systems
             cmake
-            ninja
-            pkg-config
 
-            # SQLite
+            # Additional dependencies
             sqlite
-
-            # Development Tools
-            gdb
-            valgrind
-            clang-tools # For clang-format, clang-tidy
-
-            # Additional useful libraries
-            sqlite.dev # SQLite headers
             cli11 # CLI argument parsing
+
+            # Custom scripts
+            pTimestamps
+            pDailyhours
           ];
 
           shellHook = ''
@@ -48,7 +50,7 @@
             echo "CMake Version: $(cmake --version | head -n1)"
             echo "SQLite Version: $(sqlite3 --version)"
             echo ""
-            echo "Available tools: gcc, g++, cmake, ninja, gdb, valgrind"
+            echo "Available tools: gcc, g++, cmake"
             echo ""
 
             # Set C++20 environment variables for build systems
@@ -56,13 +58,8 @@
             export CMAKE_CXX_STANDARD=20
             export CMAKE_CXX_STANDARD_REQUIRED=ON
 
-            # Create aliases for direct compiler use with C++20
-            alias g++='g++ -std=c++20 -lsqlite3'
-            alias gcc='gcc -std=c++20 -lsqlite3'
-            alias sqlite3='sqlite3 -cmd ".mode box" -cmd ".headers on"'
-
-            echo "Note: g++ and gcc aliases set to use -std=c++20 -lsqlite3 by default"
-            echo "Note: sqlite3 aliases set to use -cmd ".mode box" -cmd ".headers on" by default"
+            echo "Use pTimestamps to print timestamps"
+            echo "Use pDailyhours to print dailyhours"
           '';
         };
 
