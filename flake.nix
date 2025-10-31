@@ -66,7 +66,7 @@
         };
 
         packages.default = pkgs.gcc15Stdenv.mkDerivation {
-          pname = "timing-tool";
+          pname = "timetagger";
           version = "0.1.0";
 
           src = ./.;
@@ -86,7 +86,7 @@
 
           installPhase = ''
             mkdir -p $out/bin
-            cp timing-tool $out/bin/
+            cp timetagger $out/bin/
           '';
 
           meta = {
@@ -96,7 +96,7 @@
         };
         apps.default = {
           type = "app";
-          program = "${self.packages.${system}.default}/bin/timing-tool";
+          program = "${self.packages.${system}.default}/bin/timetagger";
         };
       }
     );
