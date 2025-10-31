@@ -1,79 +1,70 @@
-#include "Command.h"
 #include "DatabaseManager.h"
 #include "TimeManager.h"
+#include <CLI/CLI.hpp>
 #include <iostream>
-#include <sstream>
 
 using namespace std;
 
-int main() {
-    const string TIMEZONE = "Europe/Berlin";
-    string input;
+int main(int argc, char **argv) {
+  CLI::App app{"TimeTagger - Track your working hours"};
 
-    DatabaseManager dbManager("timestamps.db");
-    TimeManager ts(TIMEZONE);
+  const string TIMEZONE = "Europe/Berlin";
+  bool create_timestamp = false;
 
-    if (dbManager.connect() != true) {
-        cout << "Can't open database: " << dbManager.getLastError() << endl;
-        return 1;
+  DatabaseManager dbManager("timestamps.db");
+  TimeManager ts(TIMEZONE);
+
+  if (dbManager.connect() != true) {
+    cout << "Can't open database: " << dbManager.getLastError() << endl;
+    return 1;
+  }
+
+  if (dbManager.createTableTimestamps() != true) {
+    cout << "Can't create Table: " << dbManager.getLastError() << endl;
+    return 1;
+  }
+
+  if (dbManager.createTableDailyHours() != true) {
+    cout << "Can't create Table: " << dbManager.getLastError() << endl;
+    return 1;
+  }
+
+  if (!dbManager.populateDailyHours()) {
+    cout << "Warning: Failed to populate daily hours table" << endl;
+  }
+
+  app.add_flag("-t,--timestamp,--create-timestamp", create_timestamp,
+               "Create a new timestamp (auto-detects check-in/check-out "
+               "based on time)");
+
+  CLI11_PARSE(app, argc, argv);
+
+  if (create_timestamp) {
+    if (!ts.createTimestamp()) {
+      cerr << "Error: Couldn't create timestamp!" << endl;
+      return 1;
     }
 
-    if (dbManager.createTableTimestamps() != true) {
-        cout << "Can't create Table: " << dbManager.getLastError() << endl;
-        return 1;
+    // Display the timestamp
+    ts.print();
+
+    // Save to database
+    if (!dbManager.insertTimestamp(ts.getTimezone(), ts.getFormattedTime(),
+                                   ts.getTypeString())) {
+      cerr << "Error: Failed to save timestamp to database" << endl;
+      return 1;
     }
 
-    if (dbManager.createTableDailyHours() != true) {
-        cout << "Can't create Table: " << dbManager.getLastError() << endl;
-        return 1;
-    }
-
+    // Update daily hours
     if (!dbManager.populateDailyHours()) {
-        cout << "Warning: Failed to populate daily hours table" << endl;
+      cerr << "Warning: Failed to update daily hours" << endl;
     }
+  }
 
-    while (true) {
-        cout << "> ";
-        getline(cin, input);
-
-        istringstream iss(input);
-        string cmdStr;
-        iss >> cmdStr;
-
-        switch (parseCommand(cmdStr)) {
-        case Command::HELP:
-            cout << "Available commands: help(h), timestamp(t), quit(q), "
-                    "writeDB(d), printDB(pd)\n";
-            break;
-
-        case Command::QUIT:
-            return 0;
-
-        case Command::TIMESTAMP:
-            if (ts.createTimestamp() != true) {
-                cout << "Couldnt create Timestamp!" << endl;
-            }
-            ts.print();
-            break;
-
-        case Command::PRINT:
-            ts.print();
-            break;
-
-        case Command::PRINT_DB_SHELL:
-            dbManager.printTableShell();
-            break;
-
-        case Command::WRITE_DB:
-            dbManager.insertTimestamp(ts.getTimezone(), ts.getFormattedTime(),
-                                      ts.getTypeString());
-            break;
-
-        case Command::UNKNOWN:
-            cout << "Unknown command. Type 'help' for options.\n";
-            break;
-        }
-    }
-
+  if (argc == 1) {
+    cout << app.help() << endl;
     return 0;
+  }
+
+  return 0;
 }

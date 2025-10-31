@@ -38,6 +38,7 @@
 
             # Additional useful libraries
             sqlite.dev # SQLite headers
+            cli11 # CLI argument parsing
           ];
 
           shellHook = ''
@@ -77,6 +78,7 @@
 
           buildInputs = with pkgs; [
             sqlite
+            cli11
           ];
 
           # CMake flags
