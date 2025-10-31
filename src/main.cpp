@@ -8,6 +8,8 @@ int main(int argc, char **argv) {
 
   const std::string TIMEZONE = "Europe/Berlin";
   bool create_timestamp = false;
+  bool force_checkin = false;
+  bool force_checkout = false;
 
   DatabaseManager dbManager("timestamps.db");
   TimeManager ts(TIMEZONE);
@@ -34,9 +36,18 @@ int main(int argc, char **argv) {
                "Create a new timestamp (auto-detects check-in/check-out "
                "based on time)");
 
+  app.add_flag("-k,--checkin", force_checkin, "Forces the type Kommen");
+  app.add_flag("-g,--checkout", force_checkout, "Forces the type Gehen");
+
   CLI11_PARSE(app, argc, argv);
 
   if (create_timestamp) {
+    if (force_checkin) {
+      ts.type = TimestampType::KOMMEN;
+    } else if (force_checkout) {
+
+      ts.type = TimestampType::GEHEN;
+    }
     if (!ts.createTimestamp()) {
       std::cerr << "Error: Couldn't create timestamp!" << std::endl;
       return 1;

@@ -7,10 +7,9 @@ TimeManager::TimeManager(const std::string &timezone) : timezone_(timezone) {}
 
 std::string TimeManager::getTimezone() const { return timezone_; }
 std::string TimeManager::getFormattedTime() const { return formatted_time_; }
-TimestampType TimeManager::getType() const { return type_; }
 
 std::string TimeManager::getTypeString() const {
-    return (type_ == TimestampType::KOMMEN) ? "Kommen" : "Gehen";
+    return (type == TimestampType::KOMMEN) ? "Kommen" : "Gehen";
 }
 
 bool TimeManager::createTimestamp() {
@@ -22,8 +21,10 @@ bool TimeManager::createTimestamp() {
     auto date_part = floor<std::chrono::days>(local_time);
     auto time_of_day = std::chrono::hh_mm_ss{local_time - date_part};
 
-    type_ = (time_of_day.hours().count() < 9) ? TimestampType::KOMMEN
-                                              : TimestampType::GEHEN;
+    if (!type.has_value()) {
+        type = (time_of_day.hours().count() < 9) ? TimestampType::KOMMEN
+                                                 : TimestampType::GEHEN;
+    }
 
     // Format the timestamp
     formatted_time_ = format("{:%Y-%m-%d %H:%M:%S}", zoned_time_);

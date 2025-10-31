@@ -1,3 +1,4 @@
+#include <optional>
 #include <string>
 
 #pragma once
@@ -19,15 +20,14 @@ struct WorkingHours {
 class TimeManager {
   private:
     std::string timezone_;
-    TimestampType type_;
     std::string formatted_time_;
 
   public:
     TimeManager(const std::string &timezone);
+    std::optional<TimestampType> type;
 
     std::string getTimezone() const;
     std::string getFormattedTime() const;
-    TimestampType getType() const;
     std::string getTypeString() const;
 
     void print() const;
