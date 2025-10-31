@@ -101,7 +101,7 @@ std::chrono::system_clock::time_point
 DatabaseManager::parseTimestamp(const std::string &timestamp_str) const {
     std::istringstream ss(timestamp_str);
     std::chrono::system_clock::time_point timepoint;
-    from_stream(ss, "%Y-%m-%d %H:%M:%S", timepoint);
+    std::chrono::from_stream(ss, "%Y-%m-%d %H:%M:%S", timepoint);
     return timepoint;
 }
 
@@ -150,7 +150,8 @@ WorkingHours DatabaseManager::calculateDailyHours(const std::string &date) {
     for (size_t i = 0; i < number_of_pairs; ++i) {
         auto duration = gehen_times[i] - kommen_times[i];
         result.hours +=
-            duration_cast<std::chrono::minutes>(duration).count() / 60.0;
+            std::chrono::duration_cast<std::chrono::minutes>(duration).count() /
+            60.0;
     }
     if (result.hours >= result.minHoursForWorkBreak) {
         result.hours = result.hours - result.workBreak;
