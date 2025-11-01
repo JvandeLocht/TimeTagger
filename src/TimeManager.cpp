@@ -32,6 +32,11 @@ bool TimeManager::createTimestamp() {
     return true;
 }
 
+bool TimeManager::setFormattedTime(std::string &formatted_time) {
+    formatted_time_ = formatted_time;
+    return true;
+}
+
 void TimeManager::print() const {
     std::cout << "Timezone: " << timezone_ << std::endl;
     std::cout << "Time: " << formatted_time_ << std::endl;

@@ -32,4 +32,5 @@ class TimeManager {
 
     void print() const;
     bool createTimestamp();
+    bool setFormattedTime(std::string &formatted_time);
 };
