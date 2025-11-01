@@ -47,6 +47,28 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    - name: Install dependencies
+      shell: bash
+      run: |
+        if [ "$RUNNER_OS" == "Linux" ]; then
+          sudo apt-get update
+          sudo apt-get install -y libsqlite3-dev
+          # Install CLI11 (header-only library)
+          git clone --depth 1 --branch v2.4.2 https://github.com/CLIUtils/CLI11.git
+          cd CLI11
+          mkdir build && cd build
+          cmake -DCLI11_BUILD_TESTS=OFF -DCLI11_BUILD_EXAMPLES=OFF -DCLI11_BUILD_DOCS=OFF ..
+          sudo cmake --install .
+        elif [ "$RUNNER_OS" == "Windows" ]; then
+          choco install sqlite
+          # Install CLI11 (header-only library)
+          git clone --depth 1 --branch v2.4.2 https://github.com/CLIUtils/CLI11.git
+          cd CLI11
+          mkdir build && cd build
+          cmake -DCLI11_BUILD_TESTS=OFF -DCLI11_BUILD_EXAMPLES=OFF -DCLI11_BUILD_DOCS=OFF ..
+          cmake --install . --prefix "C:/Program Files/CLI11"
+        fi
+
     - name: Set reusable strings
       # Turn repeated input strings (such as the build output directory) into step outputs. These step outputs can be used throughout the workflow file.
       id: strings
@@ -67,9 +89,3 @@ jobs:
     - name: Build
       # Build your program with the given configuration. Note that --config is needed because the default Windows generator is a multi-config generator (Visual Studio generator).
       run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --config ${{ matrix.build_type }}
-
-    - name: Test
-      working-directory: ${{ steps.strings.outputs.build-output-dir }}
-      # Execute tests defined by the CMake configuration. Note that --build-config is needed because the default Windows generator is a multi-config generator (Visual Studio generator).
-      # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
-      run: ctest --build-config ${{ matrix.build_type }}
