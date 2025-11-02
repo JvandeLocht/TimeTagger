@@ -37,7 +37,8 @@
     "root": {
       "inputs": {
         "flake-utils": "flake-utils",
-        "nixpkgs": "nixpkgs"
+        "nixpkgs": "nixpkgs",
+        "tabulate": "tabulate"
       }
     },
     "systems": {
@@ -52,6 +53,23 @@
       "original": {
         "owner": "nix-systems",
         "repo": "default",
+        "type": "github"
+      }
+    },
+    "tabulate": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1676904003,
+        "narHash": "sha256-A4fsNzRmfHxKx5nZNUkKWMVyHDLWV5R5U1HLh9iUrTE=",
+        "owner": "p-ranav",
+        "repo": "tabulate",
+        "rev": "b35db4cce50a4b296290b0ae827305cdeb23751e",
+        "type": "github"
+      },
+      "original": {
+        "owner": "p-ranav",
+        "ref": "v1.5",
+        "repo": "tabulate",
         "type": "github"
       }
     }

@@ -4,6 +4,10 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
+    tabulate = {
+      url = "github:p-ranav/tabulate/v1.5";
+      flake = false;
+    };
   };
 
   outputs =
@@ -11,6 +15,7 @@
       self,
       nixpkgs,
       flake-utils,
+      tabulate,
     }:
     flake-utils.lib.eachDefaultSystem (
       system:
@@ -24,6 +29,47 @@
         pDailyhours = pkgs.writeShellScriptBin "pDailyhours" ''
           ${pkgs.sqlite}/bin/sqlite3 -cmd ".mode box" -cmd ".headers on" timestamps.db "SELECT * FROM dailyhours;"
         '';
+        tabulate-pkg = pkgs.stdenv.mkDerivation {
+          pname = "tabulate";
+          version = "1.5";
+          src = tabulate;
+
+          nativeBuildInputs = [ pkgs.cmake ];
+
+          # tabulate uses CMake, so this should work out of the box
+          cmakeFlags = [
+            "-DBUILD_TESTS=OFF"
+            "-DSAMPLES=OFF"
+          ];
+
+          # If tabulate doesn't have proper CMake install, we can create it manually
+          postInstall = ''
+            # Create CMake config if it doesn't exist
+            if [ ! -f "$out/lib/cmake/tabulate/tabulateConfig.cmake" ]; then
+              mkdir -p $out/lib/cmake/tabulate
+              cat > $out/lib/cmake/tabulate/tabulateConfig.cmake << EOF
+            # tabulateConfig.cmake
+            get_filename_component(TABULATE_CMAKE_DIR "\''${CMAKE_CURRENT_LIST_FILE}" PATH)
+            get_filename_component(TABULATE_INCLUDE_DIR "\''${TABULATE_CMAKE_DIR}/../../../include" ABSOLUTE)
+
+            if(NOT TARGET tabulate::tabulate)
+              add_library(tabulate::tabulate INTERFACE IMPORTED)
+              set_target_properties(tabulate::tabulate PROPERTIES
+                INTERFACE_INCLUDE_DIRECTORIES "\''${TABULATE_INCLUDE_DIR}"
+              )
+            endif()
+
+            set(tabulate_FOUND TRUE)
+            EOF
+            fi
+          '';
+
+          meta = {
+            description = "Table Maker for Modern C++";
+            homepage = "https://github.com/p-ranav/tabulate";
+            license = pkgs.lib.licenses.mit;
+          };
+        };
       in
       {
         devShells.default = pkgs.mkShell {
@@ -78,6 +124,7 @@
             sqlite
             sqlitecpp
             cli11
+            tabulate-pkg
           ];
 
           # CMake flags
