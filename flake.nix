@@ -105,6 +105,8 @@
             export CMAKE_CXX_STANDARD=20
             export CMAKE_CXX_STANDARD_REQUIRED=ON
 
+            export CMAKE_PREFIX_PATH="${tabulate-pkg}:$CMAKE_PREFIX_PATH"
+
             echo "Use pTimestamps to print timestamps"
             echo "Use pDailyhours to print dailyhours"
           '';

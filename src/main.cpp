@@ -10,6 +10,7 @@ int main(int argc, char **argv) {
     bool create_timestamp = false;
     bool force_checkin = false;
     bool force_checkout = false;
+    bool print_table = false;
     std::string formatted_time;
 
     app.add_flag("-t,--timestamp,--create-timestamp", create_timestamp,
@@ -21,6 +22,8 @@ int main(int argc, char **argv) {
 
     app.add_flag("-k,--checkin", force_checkin, "Forces the type Kommen");
     app.add_flag("-g,--checkout", force_checkout, "Forces the type Gehen");
+    app.add_flag("-p,--print", print_table,
+                 "Print timestamps table using tabulate");
 
     CLI11_PARSE(app, argc, argv);
 
@@ -43,6 +46,11 @@ int main(int argc, char **argv) {
             std::cout << "Can't create dailyhours table: "
                       << dbManager.getLastError() << std::endl;
             return 1;
+        }
+
+        if (print_table) {
+            dbManager.printTimestampsTable();
+            return 0;
         }
 
         if (create_timestamp) {
