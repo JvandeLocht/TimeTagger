@@ -7,21 +7,8 @@
 #include <vector>
 
 DatabaseManager::DatabaseManager(const std::string &filepath)
-    : db_(nullptr), filepath_(filepath) {}
-
-DatabaseManager::~DatabaseManager() {
-    if (db_ != nullptr) {
-        sqlite3_close(db_);
-        db_ = nullptr;
-    }
-}
-
-bool DatabaseManager::connect() {
-    if (sqlite3_open(filepath_.c_str(), &db_) != SQLITE_OK) {
-        return false;
-    }
-    return true;
-}
+    : db_(filepath, SQLite::OPEN_READWRITE | SQLite::OPEN_CREATE),
+      filepath_(filepath) {}
 
 bool DatabaseManager::createTableTimestamps() {
     const char *createTableSQL = "CREATE TABLE IF NOT EXISTS timestamps ("
@@ -32,11 +19,12 @@ bool DatabaseManager::createTableTimestamps() {
                                  "created_at DATETIME DEFAULT CURRENT_TIMESTAMP"
                                  ");";
 
-    if (sqlite3_exec(db_, createTableSQL, nullptr, nullptr, nullptr) !=
-        SQLITE_OK) {
-        return false;
-    } else {
+    try {
+        db_.exec(createTableSQL);
         return true;
+    } catch (const std::exception &e) {
+        std::cerr << "Table creation error: " << e.what() << std::endl;
+        return false;
     }
 }
 
@@ -47,11 +35,12 @@ bool DatabaseManager::createTableDailyHours() {
                                  "hours REAL NOT NULL"
                                  ");";
 
-    if (sqlite3_exec(db_, createTableSQL, nullptr, nullptr, nullptr) !=
-        SQLITE_OK) {
-        return false;
-    } else {
+    try {
+        db_.exec(createTableSQL);
         return true;
+    } catch (const std::exception &e) {
+        std::cerr << "Table creation error: " << e.what() << std::endl;
+        return false;
     }
 }
 
@@ -68,33 +57,24 @@ bool DatabaseManager::insertTimestamp(std::string timezone,
     const char *sql = "INSERT INTO timestamps (timezone, timestamp, type) "
                       "VALUES (?, ?, ?);";
 
-    sqlite3_stmt *stmt;
+    try {
+        SQLite::Statement query(db_, sql);
+        query.bind(1, timezone);
+        query.bind(2, formatedTimestamp);
+        query.bind(3, type);
 
-    if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) == SQLITE_OK) {
-        sqlite3_bind_text(stmt, 1, timezone.c_str(), -1, SQLITE_TRANSIENT);
-        sqlite3_bind_text(stmt, 2, formatedTimestamp.c_str(), -1,
-                          SQLITE_TRANSIENT);
-        sqlite3_bind_text(stmt, 3, type.c_str(), -1, SQLITE_TRANSIENT);
+        query.exec();
 
-        bool success = (sqlite3_step(stmt) == SQLITE_DONE);
-        sqlite3_finalize(stmt);
-        if (success) {
-            std::cout << type << " timestamp saved: " << formatedTimestamp
-                      << std::endl;
-        }
-        return success;
-    } else {
+        std::cout << type << " timestamp saved: " << formatedTimestamp
+                  << std::endl;
+        return true;
+    } catch (const std::exception &e) {
+        std::cerr << "Insert error: " << e.what() << std::endl;
         return false;
     }
 }
 
-std::string DatabaseManager::getLastError() const {
-    if (db_ != nullptr) {
-        return sqlite3_errmsg(db_);
-    } else {
-        return "Database not connected!";
-    }
-}
+std::string DatabaseManager::getLastError() const { return db_.getErrorMsg(); }
 
 std::optional<std::chrono::system_clock::time_point>
 DatabaseManager::parseTimestamp(const std::string &timestamp_str) const {
@@ -118,60 +98,57 @@ WorkingHours DatabaseManager::calculateDailyHours(const std::string &date) {
                       "WHERE DATE(timestamp) = ? "
                       "ORDER BY timestamp ASC;";
 
-    sqlite3_stmt *stmt;
+    try {
+        SQLite::Statement query(db_, sql);
+        query.bind(1, date);
 
-    if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+        std::vector<std::chrono::system_clock::time_point> kommen_times;
+        std::vector<std::chrono::system_clock::time_point> gehen_times;
+
+        while (query.executeStep()) {
+            std::string timestamp_str = query.getColumn(0).getText();
+            std::string type_str = query.getColumn(1).getText();
+
+            auto timepoint_opt = parseTimestamp(timestamp_str);
+
+            if (!timepoint_opt) {
+                std::cerr << "Error: Invalid timestamp in database: "
+                          << timestamp_str << std::endl;
+                result.hours = -1.0;
+                return result;
+            }
+
+            auto timepoint = *timepoint_opt;
+
+            if (type_str == "Kommen") {
+                kommen_times.push_back(timepoint);
+            } else {
+                gehen_times.push_back(timepoint);
+            }
+        }
+
+        result.kommen_count = kommen_times.size();
+        result.gehen_count = gehen_times.size();
+
+        // Calculate hours by pairing Kommen with Gehen
+        size_t number_of_pairs =
+            std::min(kommen_times.size(), gehen_times.size());
+        for (size_t i = 0; i < number_of_pairs; ++i) {
+            auto duration = gehen_times[i] - kommen_times[i];
+            result.hours +=
+                std::chrono::duration_cast<std::chrono::minutes>(duration)
+                    .count() /
+                60.0;
+        }
+        if (result.hours >= result.minHoursForWorkBreak) {
+            result.hours = result.hours - result.workBreak;
+        }
+
+        return result;
+    } catch (const std::exception &e) {
+        std::cerr << "Query error: " << e.what() << std::endl;
         return result;
     }
-
-    sqlite3_bind_text(stmt, 1, date.c_str(), -1, SQLITE_TRANSIENT);
-
-    std::vector<std::chrono::system_clock::time_point> kommen_times;
-    std::vector<std::chrono::system_clock::time_point> gehen_times;
-
-    while (sqlite3_step(stmt) == SQLITE_ROW) {
-        const char *timestamp_str =
-            reinterpret_cast<const char *>(sqlite3_column_text(stmt, 0));
-        const char *type_str =
-            reinterpret_cast<const char *>(sqlite3_column_text(stmt, 1));
-
-        auto timepoint_opt = parseTimestamp(timestamp_str);
-
-        if (!timepoint_opt) {
-            std::cerr << "Error: Invalid timestamp in database: "
-                      << timestamp_str << std::endl;
-            result.hours = -1.0;
-            sqlite3_finalize(stmt);
-            return result;
-        }
-
-        auto timepoint = *timepoint_opt;
-
-        if (std::string_view(type_str) == "Kommen") {
-            kommen_times.push_back(timepoint);
-        } else {
-            gehen_times.push_back(timepoint);
-        }
-    }
-
-    sqlite3_finalize(stmt);
-
-    result.kommen_count = kommen_times.size();
-    result.gehen_count = gehen_times.size();
-
-    // Calculate hours by pairing Kommen with Gehen
-    size_t number_of_pairs = std::min(kommen_times.size(), gehen_times.size());
-    for (size_t i = 0; i < number_of_pairs; ++i) {
-        auto duration = gehen_times[i] - kommen_times[i];
-        result.hours +=
-            std::chrono::duration_cast<std::chrono::minutes>(duration).count() /
-            60.0;
-    }
-    if (result.hours >= result.minHoursForWorkBreak) {
-        result.hours = result.hours - result.workBreak;
-    }
-
-    return result;
 }
 
 bool DatabaseManager::populateDailyHours() {
@@ -182,37 +159,30 @@ bool DatabaseManager::populateDailyHours() {
                            "FROM timestamps "
                            "ORDER BY date;";
 
-    sqlite3_stmt *stmtDailyHours;
-    sqlite3_stmt *stmtDates;
+    try {
+        std::vector<std::string> dates;
 
-    std::vector<std::string> dates;
+        // Get all distinct dates
+        {
+            SQLite::Statement queryDates(db_, sqlDates);
+            while (queryDates.executeStep()) {
+                dates.push_back(queryDates.getColumn(0).getText());
+            }
+        }
 
-    if (sqlite3_prepare_v2(db_, sqlDates, -1, &stmtDates, nullptr) !=
-        SQLITE_OK) {
+        // Insert/update daily hours for each date
+        for (const auto &day : dates) {
+            double workHour = calculateDailyHours(day).hours;
+
+            SQLite::Statement queryInsert(db_, sqlDailyHours);
+            queryInsert.bind(1, day);
+            queryInsert.bind(2, workHour);
+            queryInsert.exec();
+        }
+
+        return true;
+    } catch (const std::exception &e) {
+        std::cerr << "Error populating daily hours: " << e.what() << std::endl;
         return false;
     }
-
-    while (sqlite3_step(stmtDates) == SQLITE_ROW) {
-        const char *date =
-            reinterpret_cast<const char *>(sqlite3_column_text(stmtDates, 0));
-
-        dates.push_back(date);
-    }
-    sqlite3_finalize(stmtDates);
-
-    for (const auto &day : dates) {
-        double workHour = calculateDailyHours(day).hours;
-        if (sqlite3_prepare_v2(db_, sqlDailyHours, -1, &stmtDailyHours,
-                               nullptr) == SQLITE_OK) {
-            sqlite3_bind_text(stmtDailyHours, 1, day.c_str(), -1,
-                              SQLITE_TRANSIENT);
-            sqlite3_bind_double(stmtDailyHours, 2, workHour);
-
-            sqlite3_step(stmtDailyHours);
-            sqlite3_finalize(stmtDailyHours);
-        } else {
-            return false;
-        }
-    }
-    return true;
 }

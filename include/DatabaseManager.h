@@ -1,14 +1,14 @@
 #include "TimeManager.h"
+#include <SQLiteCpp/SQLiteCpp.h>
 #include <chrono>
 #include <optional>
-#include <sqlite3.h>
 #include <string>
 
 #pragma once
 
 class DatabaseManager {
   private:
-    sqlite3 *db_;
+    SQLite::Database db_;
     std::string filepath_;
 
     std::optional<std::chrono::system_clock::time_point>
@@ -16,13 +16,7 @@ class DatabaseManager {
 
   public:
     DatabaseManager(const std::string &filepath);
-    ~DatabaseManager();
 
-    // Prevent copying (database connections shouldn't be copied)
-    DatabaseManager(const DatabaseManager &) = delete;
-    DatabaseManager &operator=(const DatabaseManager &) = delete;
-
-    bool connect();
     bool createTableTimestamps();
     bool createTableDailyHours();
     bool populateDailyHours();

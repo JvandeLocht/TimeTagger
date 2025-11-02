@@ -12,9 +12,6 @@ int main(int argc, char **argv) {
     bool force_checkout = false;
     std::string formatted_time;
 
-    DatabaseManager dbManager("timestamps.db");
-    TimeManager ts(TIMEZONE);
-
     app.add_flag("-t,--timestamp,--create-timestamp", create_timestamp,
                  "Create a new timestamp (auto-detects check-in/check-out "
                  "based on time)");
@@ -32,79 +29,87 @@ int main(int argc, char **argv) {
         return 0;
     }
 
-    if (dbManager.connect() != true) {
-        std::cout << "Can't open database: " << dbManager.getLastError()
-                  << std::endl;
-        return 1;
-    }
+    try {
+        DatabaseManager dbManager("timestamps.db");
+        TimeManager ts(TIMEZONE);
 
-    if (dbManager.createTableTimestamps() != true) {
-        std::cout << "Can't create Table: " << dbManager.getLastError()
-                  << std::endl;
-        return 1;
-    }
-
-    if (dbManager.createTableDailyHours() != true) {
-        std::cout << "Can't create Table: " << dbManager.getLastError()
-                  << std::endl;
-        return 1;
-    }
-
-    if (create_timestamp) {
-        if (force_checkin) {
-            ts.type = TimestampType::KOMMEN;
-        } else if (force_checkout) {
-
-            ts.type = TimestampType::GEHEN;
-        }
-
-        if (!ts.createTimestamp()) {
-            std::cerr << "Error: Couldn't create timestamp!" << std::endl;
-            return 1;
-        } else {
-            formatted_time = ts.getFormattedTime();
-        }
-
-        // Display the timestamp
-        ts.print();
-
-        // Save to database
-        if (!dbManager.insertTimestamp(ts.getTimezone(), formatted_time,
-                                       ts.getTypeString())) {
-            std::cerr << "Error: Failed to save timestamp to database"
-                      << std::endl;
+        if (!dbManager.createTableTimestamps()) {
+            std::cout << "Can't create timestamps table: "
+                      << dbManager.getLastError() << std::endl;
             return 1;
         }
 
-        // Update daily hours
-        if (!dbManager.populateDailyHours()) {
-            std::cerr << "Warning: Failed to update daily hours" << std::endl;
-        }
-    }
-
-    if (!formatted_time.empty()) {
-        if (force_checkin) {
-            ts.type = TimestampType::KOMMEN;
-        } else if (force_checkout) {
-
-            ts.type = TimestampType::GEHEN;
-        }
-
-        // Display the timestamp
-        ts.print();
-
-        // Save to database
-        if (!dbManager.insertTimestamp(ts.getTimezone(), formatted_time,
-                                       ts.getTypeString())) {
-            std::cerr << "Error: Failed to save timestamp to database"
-                      << std::endl;
+        if (!dbManager.createTableDailyHours()) {
+            std::cout << "Can't create dailyhours table: "
+                      << dbManager.getLastError() << std::endl;
             return 1;
         }
 
-        // Update daily hours
-        if (!dbManager.populateDailyHours()) {
-            std::cerr << "Warning: Failed to update daily hours" << std::endl;
+        if (create_timestamp) {
+            if (force_checkin) {
+                ts.type = TimestampType::KOMMEN;
+            } else if (force_checkout) {
+                ts.type = TimestampType::GEHEN;
+            }
+
+            if (!ts.createTimestamp()) {
+                std::cerr << "Error: Couldn't create timestamp!" << std::endl;
+                return 1;
+            } else {
+                formatted_time = ts.getFormattedTime();
+            }
+
+            // Display the timestamp
+            ts.print();
+
+            // Save to database
+            if (!dbManager.insertTimestamp(ts.getTimezone(), formatted_time,
+                                           ts.getTypeString())) {
+                std::cerr << "Error: Failed to save timestamp to database"
+                          << std::endl;
+                return 1;
+            }
+
+            // Update daily hours
+            if (!dbManager.populateDailyHours()) {
+                std::cerr << "Warning: Failed to update daily hours"
+                          << std::endl;
+            }
         }
+
+        if (!formatted_time.empty() && !create_timestamp) {
+            if (force_checkin) {
+                ts.type = TimestampType::KOMMEN;
+            } else if (force_checkout) {
+                ts.type = TimestampType::GEHEN;
+            }
+
+            if (!ts.createTimestamp()) {
+                std::cerr << "Error: Couldn't create timestamp!" << std::endl;
+                return 1;
+            }
+
+            // Display the timestamp
+            ts.print();
+
+            // Save to database
+            if (!dbManager.insertTimestamp(ts.getTimezone(), formatted_time,
+                                           ts.getTypeString())) {
+                std::cerr << "Error: Failed to save timestamp to database"
+                          << std::endl;
+                return 1;
+            }
+
+            // Update daily hours
+            if (!dbManager.populateDailyHours()) {
+                std::cerr << "Warning: Failed to update daily hours"
+                          << std::endl;
+            }
+        }
+
+    } catch (const std::exception &e) {
+        std::cerr << "Database error: " << e.what() << std::endl;
+        return 1;
     }
 
     return 0;
