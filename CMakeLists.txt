@@ -7,7 +7,8 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 # Find CLI11 (header-only library)
 find_package(CLI11 CONFIG REQUIRED)
+find_package(SQLiteCpp CONFIG REQUIRED)
 
 add_executable(timetagger src/main.cpp src/TimeManager.cpp src/DatabaseManager.cpp)
 target_include_directories(timetagger PRIVATE include)
-target_link_libraries(timetagger PRIVATE sqlite3 CLI11::CLI11)
+target_link_libraries(timetagger PRIVATE sqlite3 SQLiteCpp CLI11::CLI11)

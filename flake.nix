@@ -36,6 +36,7 @@
 
             # Additional dependencies
             sqlite
+            sqlitecpp # c++ wrapper for sqlite
             cli11 # CLI argument parsing
 
             # Custom scripts
@@ -75,6 +76,7 @@
 
           buildInputs = with pkgs; [
             sqlite
+            sqlitecpp
             cli11
           ];
 
