@@ -1,10 +1,18 @@
-#include "TimeManager.h"
 #include <SQLiteCpp/SQLiteCpp.h>
 #include <chrono>
 #include <optional>
 #include <string>
 
 #pragma once
+
+struct WorkingHours {
+    std::string date;
+    double hours;
+    double workBreak;
+    double minHoursForWorkBreak;
+    int kommen_count;
+    int gehen_count;
+};
 
 class DatabaseManager {
   private:
