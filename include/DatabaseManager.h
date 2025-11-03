@@ -28,7 +28,6 @@ class DatabaseManager {
     bool createTableTimestamps();
     bool createTableDailyHours();
     bool populateDailyHours();
-    void printTableShell();
     void printTimestampsTable();
     bool insertTimestamp(std::string timezone, std::string formatedTimestamp,
                          std::string type);

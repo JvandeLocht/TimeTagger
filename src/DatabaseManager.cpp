@@ -45,13 +45,6 @@ bool DatabaseManager::createTableDailyHours() {
     }
 }
 
-void DatabaseManager::printTableShell() {
-    std::string command = "sqlite3 -cmd '.mode box' -cmd '.headers on' " +
-                          filepath_ + " 'SELECT * FROM timestamps;'";
-
-    system(command.c_str());
-}
-
 void DatabaseManager::printTimestampsTable() {
     using namespace tabulate;
 
