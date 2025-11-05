@@ -52,9 +52,12 @@ void DatabaseManager::printTimestampsTable() {
                     "FROM timestamps ts "
                     "LEFT JOIN dailyhours d ON DATE(ts.timestamp) = d.date "
                     "ORDER BY timestamp ASC;";
+  const char *sqlSum = "SELECT SUM(hours) from dailyhours";
 
   try {
     SQLite::Statement query(db_, sql);
+    SQLite::Statement querySum(db_, sqlSum);
+    querySum.executeStep();
 
     // Create table with headers
     Table table;
@@ -88,6 +91,8 @@ void DatabaseManager::printTimestampsTable() {
 
     // Print summary
     std::cout << "Total records: " << (row_count - 1) << std::endl;
+    std::cout << "Total hours: " << querySum.getColumn(0).getDouble()
+              << std::endl;
 
   } catch (const std::exception &e) {
     std::cerr << "Error printing table: " << e.what() << std::endl;
