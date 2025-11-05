@@ -84,6 +84,7 @@
             sqlite
             sqlitecpp # c++ wrapper for sqlite
             cli11 # CLI argument parsing
+            tomlplusplus
 
             # Custom scripts
             pTimestamps
@@ -127,6 +128,7 @@
             sqlitecpp
             cli11
             tabulate-pkg
+            tomlplusplus
           ];
 
           # CMake flags

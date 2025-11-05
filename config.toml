@@ -1,0 +1,3 @@
+# Application configuration
+[locale]
+timezone = "Europe/Berlin"

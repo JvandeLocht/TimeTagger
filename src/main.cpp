@@ -2,16 +2,27 @@
 #include "TimeManager.h"
 #include <CLI/CLI.hpp>
 #include <iostream>
+#include <toml++/toml.h>
+
+std::string TIMEZONE;
 
 int main(int argc, char **argv) {
     CLI::App app{"TimeTagger - Track your working hours"};
 
-    const std::string TIMEZONE = "Europe/Berlin";
     bool create_timestamp = false;
     bool force_checkin = false;
     bool force_checkout = false;
     bool print_table = false;
     std::string formatted_time;
+
+    try {
+        auto config = toml::parse_file("config.toml");
+
+        TIMEZONE = config["locale"]["timezone"].value_or("Europe/Berlin");
+    } catch (const toml::parse_error &err) {
+        std::cerr << "Error parsing config: " << err << std::endl;
+        return 1;
+    }
 
     app.add_flag("-t,--timestamp,--create-timestamp", create_timestamp,
                  "Create a new timestamp (auto-detects check-in/check-out "
