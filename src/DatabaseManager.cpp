@@ -69,15 +69,13 @@ void DatabaseManager::printTimestampsTable() {
 
     // Add data rows
     int row_count = 1;
-    std::string last_date;
     while (query.executeStep()) {
-      std::string current_date = query.getColumn(2).getText();
       table.add_row({
-          query.getColumn(0).getText(),               // timestamp
-          query.getColumn(1).getText(),               // type
-          current_date != last_date ? "" : last_date, // totol duration
+          query.getColumn(0).getText(), // timestamp
+          query.getColumn(1).getText(), // type
+          row_count % 2 == 0 ? query.getColumn(2).getText()
+                             : "", // totol duration
       });
-      last_date = current_date;
 
       if (row_count % 2 == 0) {
         table[row_count].format().font_color(Color::white).hide_border_top();
