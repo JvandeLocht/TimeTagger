@@ -51,7 +51,7 @@ void DatabaseManager::printTimestampsTable() {
   const char *sql = "SELECT ts.timestamp, ts.type, d.hours "
                     "FROM timestamps ts "
                     "LEFT JOIN dailyhours d ON DATE(ts.timestamp) = d.date "
-                    "ORDER BY timestamp DESC;";
+                    "ORDER BY timestamp ASC;";
 
   try {
     SQLite::Statement query(db_, sql);
