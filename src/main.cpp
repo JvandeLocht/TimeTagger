@@ -60,6 +60,7 @@ int main(int argc, char **argv) {
         }
 
         if (print_table) {
+            dbManager.populateDailyHours();
             dbManager.printTimestampsTable();
             return 0;
         }

@@ -7,7 +7,7 @@
 
 struct WorkingHours {
     std::string date;
-    double hours;
+    std::vector<double> hours;
     double workBreak;
     double minHoursForWorkBreak;
     int kommen_count;

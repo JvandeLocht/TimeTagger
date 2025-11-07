@@ -17,6 +17,7 @@ bool DatabaseManager::createTableTimestamps() {
                                "timezone TEXT NOT NULL,"
                                "timestamp TEXT NOT NULL,"
                                "type TEXT NOT NULL,"
+                               "session_id integer NOT NULL,"
                                "created_at DATETIME DEFAULT CURRENT_TIMESTAMP"
                                ");";
 
@@ -32,8 +33,10 @@ bool DatabaseManager::createTableTimestamps() {
 bool DatabaseManager::createTableDailyHours() {
   const char *createTableSQL = "CREATE TABLE IF NOT EXISTS dailyhours ("
                                "id INTEGER PRIMARY KEY AUTOINCREMENT,"
-                               "date TEXT NOT NULL UNIQUE,"
-                               "hours REAL NOT NULL"
+                               "date TEXT NOT NULL,"
+                               "hours REAL NOT NULL,"
+                               "session_id integer NOT NULL,"
+                               "UNIQUE(date, hours)"
                                ");";
 
   try {
@@ -50,7 +53,7 @@ void DatabaseManager::printTimestampsTable() {
 
   const char *sql = "SELECT ts.timestamp, ts.type, d.hours "
                     "FROM timestamps ts "
-                    "LEFT JOIN dailyhours d ON DATE(ts.timestamp) = d.date "
+                    "LEFT JOIN dailyhours d ON ts.session_id = d.session_id "
                     "ORDER BY timestamp ASC;";
   const char *sqlSum = "SELECT SUM(hours) from dailyhours";
 
@@ -102,15 +105,40 @@ void DatabaseManager::printTimestampsTable() {
 bool DatabaseManager::insertTimestamp(std::string timezone,
                                       std::string formatedTimestamp,
                                       std::string type) {
-  const char *sql = "INSERT INTO timestamps (timezone, timestamp, type) "
-                    "VALUES (?, ?, ?);";
+  const char *sql =
+      "INSERT INTO timestamps (timezone, timestamp, type, session_id) "
+      "VALUES (?, ?, ?, ?);";
 
   try {
+    int session_id{-1};
+
     SQLite::Statement query(db_, sql);
     query.bind(1, timezone);
     query.bind(2, formatedTimestamp);
     query.bind(3, type);
 
+    if (type == "Kommen") {
+      const char *getMaxSql =
+          "SELECT COALESCE(MAX(session_id), 0) + 1 FROM timestamps;";
+      SQLite::Statement maxQuery(db_, getMaxSql);
+      if (maxQuery.executeStep()) {
+        session_id = maxQuery.getColumn(0).getInt();
+      }
+    } else if (type == "Gehen") {
+      const char *getCurrentSql = "SELECT MAX(session_id) FROM timestamps;";
+      SQLite::Statement currentQuery(db_, getCurrentSql);
+      if (currentQuery.executeStep() && !currentQuery.getColumn(0).isNull()) {
+        session_id = currentQuery.getColumn(0).getInt();
+      } else {
+        std::cerr << "Error: No active session to check out from!" << std::endl;
+        return false;
+      }
+    } else {
+      std::cerr << "Error: Invalid type '" << type << "'" << std::endl;
+      return false;
+    }
+
+    query.bind(4, session_id);
     query.exec();
 
     std::cout << type << " timestamp saved: " << formatedTimestamp << std::endl;
@@ -137,7 +165,7 @@ DatabaseManager::parseTimestamp(const std::string &timestamp_str) const {
 }
 
 WorkingHours DatabaseManager::calculateDailyHours(const std::string &date) {
-  WorkingHours result{date, 0.0, 0, 0, 0, 0};
+  WorkingHours result{date, {}, 0, 0, 0, 0};
   result.workBreak = 0.5;
   result.minHoursForWorkBreak = 6;
 
@@ -161,7 +189,7 @@ WorkingHours DatabaseManager::calculateDailyHours(const std::string &date) {
       if (!timepoint_opt) {
         std::cerr << "Error: Invalid timestamp in database: " << timestamp_str
                   << std::endl;
-        result.hours = -1.0;
+        result.hours.push_back(-1.0);
         return result;
       }
 
@@ -181,12 +209,9 @@ WorkingHours DatabaseManager::calculateDailyHours(const std::string &date) {
     size_t number_of_pairs = std::min(kommen_times.size(), gehen_times.size());
     for (size_t i = 0; i < number_of_pairs; ++i) {
       auto duration = gehen_times[i] - kommen_times[i];
-      result.hours +=
+      result.hours.push_back(
           std::chrono::duration_cast<std::chrono::minutes>(duration).count() /
-          60.0;
-    }
-    if (result.hours >= result.minHoursForWorkBreak) {
-      result.hours = result.hours - result.workBreak;
+          60.0);
     }
 
     return result;
@@ -197,32 +222,40 @@ WorkingHours DatabaseManager::calculateDailyHours(const std::string &date) {
 }
 
 bool DatabaseManager::populateDailyHours() {
-  const char *sqlDailyHours =
-      "INSERT INTO dailyhours (date, hours) VALUES (?, ?) "
-      "ON CONFLICT(date) DO UPDATE SET hours = excluded.hours;";
-  const char *sqlDates = "SELECT DISTINCT DATE(timestamp) AS date "
+  const char *sqlDailyHours = "INSERT OR IGNORE INTO dailyhours (date, hours, "
+                              "session_id) VALUES (?, ?, ?); ";
+  const char *sqlDates = "SELECT DISTINCT DATE(timestamp) AS date, session_id "
                          "FROM timestamps "
                          "ORDER BY date;";
+  struct Row {
+    int session_id;
+    std::string day;
+  };
 
   try {
-    std::vector<std::string> dates;
+    std::vector<Row> dates;
 
     // Get all distinct dates
     {
       SQLite::Statement queryDates(db_, sqlDates);
       while (queryDates.executeStep()) {
-        dates.push_back(queryDates.getColumn(0).getText());
+        Row row;
+        row.day = queryDates.getColumn(0).getText();
+        row.session_id = queryDates.getColumn(1).getInt();
+        dates.push_back(row);
       }
     }
 
     // Insert/update daily hours for each date
-    for (const auto &day : dates) {
-      double workHour = calculateDailyHours(day).hours;
-
-      SQLite::Statement queryInsert(db_, sqlDailyHours);
-      queryInsert.bind(1, day);
-      queryInsert.bind(2, workHour);
-      queryInsert.exec();
+    for (const auto &row : dates) {
+      std::vector<double> workHours = calculateDailyHours(row.day).hours;
+      for (const auto &hour : workHours) {
+        SQLite::Statement queryInsert(db_, sqlDailyHours);
+        queryInsert.bind(1, row.day);
+        queryInsert.bind(2, hour);
+        queryInsert.bind(3, row.session_id);
+        queryInsert.exec();
+      }
     }
 
     return true;
