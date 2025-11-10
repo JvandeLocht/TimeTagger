@@ -63,19 +63,20 @@ classDiagram
 ```mermaid
 erDiagram
     timestamps {
-        INTEGER id PK "PRIMARY KEY AUTOINCREMENT"
+        INTEGER id "PK, AUTOINCREMENT"
         TEXT timezone "NOT NULL"
         TEXT timestamp "NOT NULL"
         TEXT type "NOT NULL (Kommen/Gehen)"
-        INTEGER session_id "NOT NULL"
+        INTEGER session_id "NOT NULL, FK"
         DATETIME created_at "DEFAULT CURRENT_TIMESTAMP"
     }
 
     dailyhours {
-        INTEGER id PK "PRIMARY KEY AUTOINCREMENT"
+        INTEGER id "PK, AUTOINCREMENT"
         TEXT date "NOT NULL"
         REAL hours "NOT NULL"
-        INTEGER session_id "NOT NULL"
+        INTEGER session_id "NOT NULL, FK"
+        string constraint "UNIQUE(date, hours)"
     }
 
     timestamps ||--|| dailyhours : "linked by session_id"
