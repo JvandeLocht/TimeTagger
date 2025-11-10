@@ -57,3 +57,26 @@ classDiagram
     TimeManager --> TimestampType : uses
     DatabaseManager ..> WorkingHours : returns
 ```
+
+## Entity-Relationship Diagram
+
+```mermaid
+erDiagram
+    timestamps {
+        INTEGER id PK "PRIMARY KEY AUTOINCREMENT"
+        TEXT timezone "NOT NULL"
+        TEXT timestamp "NOT NULL"
+        TEXT type "NOT NULL (Kommen/Gehen)"
+        INTEGER session_id "NOT NULL"
+        DATETIME created_at "DEFAULT CURRENT_TIMESTAMP"
+    }
+
+    dailyhours {
+        INTEGER id PK "PRIMARY KEY AUTOINCREMENT"
+        TEXT date "NOT NULL"
+        REAL hours "NOT NULL"
+        INTEGER session_id "NOT NULL"
+    }
+
+    timestamps ||--|| dailyhours : "linked by session_id"
+```
