@@ -5,7 +5,6 @@ This is just a playground to learn c++.
 classDiagram
     direction TB
     
-    %% Data Types
     class TimestampType {
         <<enumeration>>
         KOMMEN
@@ -22,66 +21,39 @@ classDiagram
         +int gehen_count
     }
 
-    %% Core Components
     class TimeManager {
         -string timezone_
         -string formatted_time_
         +optional~TimestampType~ type
-        +TimeManager(string timezone)
+        +TimeManager(timezone)
         +getTimezone() string
         +getFormattedTime() string
         +getTypeString() string
         +createTimestamp() bool
-        +setFormattedTime(string& formatted_time) bool
+        +setFormattedTime() bool
         +print() void
     }
 
     class DatabaseManager {
-        -SQLite::Database db_
+        -Database db_
         -string filepath_
-        -parseTimestamp(string) optional~time_point~
-        +DatabaseManager(string filepath)
+        +DatabaseManager(filepath)
         +createTableTimestamps() bool
         +createTableDailyHours() bool
         +populateDailyHours() bool
         +printTimestampsTable() void
-        +insertTimestamp(string, string, string) bool
-        +getLastError() string
-        +calculateDailyHours(string date) WorkingHours
+        +insertTimestamp() bool
+        +calculateDailyHours() WorkingHours
     }
 
     class Main {
         <<application>>
-        +main(int argc, char** argv) int
         -string TIMEZONE
+        +main() int
     }
 
-    %% External Libraries
-    class SQLiteCpp {
-        <<library>>
-    }
-
-    class CLI11 {
-        <<library>>
-    }
-
-    class Tabulate {
-        <<library>>
-    }
-
-    class TomlPlusPlus {
-        <<library>>
-    }
-
-    %% Relationships - organized to minimize crossings
-    Main --> TimeManager
-    Main --> DatabaseManager
-    Main ..> CLI11
-    Main ..> TomlPlusPlus
-    
-    TimeManager --> TimestampType
-    
-    DatabaseManager ..> WorkingHours
-    DatabaseManager --> SQLiteCpp
-    DatabaseManager ..> Tabulate
+    Main --> TimeManager : creates
+    Main --> DatabaseManager : creates
+    TimeManager --> TimestampType : uses
+    DatabaseManager ..> WorkingHours : returns
 ```
