@@ -2,6 +2,7 @@
 #include <chrono>
 #include <cstdlib>
 #include <iostream>
+#include <map>
 #include <sstream>
 #include <string>
 #include <tabulate/table.hpp>
@@ -36,7 +37,8 @@ bool DatabaseManager::createTableDailyHours() {
                                "date TEXT NOT NULL,"
                                "hours REAL NOT NULL,"
                                "session_id integer NOT NULL,"
-                               "UNIQUE(date, hours)"
+                               "type TEXT DEFAULT 'work',"
+                               "UNIQUE(date, session_id, type)"
                                ");";
 
   try {
@@ -53,18 +55,25 @@ void DatabaseManager::printTimestampsTable() {
 
   const char *sql = "SELECT ts.timestamp, ts.type, d.hours "
                     "FROM timestamps ts "
-                    "LEFT JOIN dailyhours d ON ts.session_id = d.session_id "
+                    "LEFT JOIN dailyhours d ON ts.session_id = d.session_id AND d.type = 'work' "
                     "ORDER BY timestamp ASC;";
-  const char *sqlSum = "SELECT SUM(hours) from dailyhours";
+  const char *sqlGrossHours = "SELECT SUM(hours) FROM dailyhours WHERE type = 'work'";
+  const char *sqlBreakCount = "SELECT COUNT(*) FROM dailyhours WHERE type = 'break'";
+  const char *sqlNetHours = "SELECT SUM(hours) FROM dailyhours";
 
   try {
     SQLite::Statement query(db_, sql);
-    SQLite::Statement querySum(db_, sqlSum);
-    querySum.executeStep();
+    SQLite::Statement queryGross(db_, sqlGrossHours);
+    SQLite::Statement queryBreakCount(db_, sqlBreakCount);
+    SQLite::Statement queryNet(db_, sqlNetHours);
+
+    queryGross.executeStep();
+    queryBreakCount.executeStep();
+    queryNet.executeStep();
 
     // Create table with headers
     Table table;
-    table.add_row({"Timestamp", "Type", "Hours"});
+    table.add_row({"Timestamp", "Type", "Session Hours"});
 
     // Format header row
     table[0]
@@ -93,9 +102,17 @@ void DatabaseManager::printTimestampsTable() {
     std::cout << table << std::endl;
 
     // Print summary
+    double grossHours = queryGross.getColumn(0).getDouble();
+    int breakDays = queryBreakCount.getColumn(0).getInt();
+    double breakHours = breakDays * 0.5;
+    double netHours = queryNet.getColumn(0).getDouble();
+
+    std::cout << "\n=== Summary ===" << std::endl;
     std::cout << "Total records: " << (row_count - 1) << std::endl;
-    std::cout << "Total hours: " << querySum.getColumn(0).getDouble()
-              << std::endl;
+    std::cout << "Gross hours: " << grossHours << std::endl;
+    std::cout << "Breaks applied: -" << breakHours << " (" << breakDays
+              << (breakDays == 1 ? " day" : " days") << " @ 0.5h)" << std::endl;
+    std::cout << "Net hours: " << netHours << std::endl;
 
   } catch (const std::exception &e) {
     std::cerr << "Error printing table: " << e.what() << std::endl;
@@ -223,7 +240,9 @@ WorkingHours DatabaseManager::calculateDailyHours(const std::string &date) {
 
 bool DatabaseManager::populateDailyHours() {
   const char *sqlDailyHours = "INSERT OR IGNORE INTO dailyhours (date, hours, "
-                              "session_id) VALUES (?, ?, ?); ";
+                              "session_id, type) VALUES (?, ?, ?, 'work'); ";
+  const char *sqlBreak = "INSERT OR IGNORE INTO dailyhours (date, hours, "
+                         "session_id, type) VALUES (?, ?, 0, 'break'); ";
   const char *sqlDates = "SELECT DISTINCT DATE(timestamp) AS date, session_id "
                          "FROM timestamps "
                          "ORDER BY date;";
@@ -246,15 +265,32 @@ bool DatabaseManager::populateDailyHours() {
       }
     }
 
-    // Insert/update daily hours for each date
+    // Track daily totals to determine if break applies
+    std::map<std::string, double> dailyTotals;
+
+    // Insert work hours for each session
     for (const auto &row : dates) {
-      std::vector<double> workHours = calculateDailyHours(row.day).hours;
-      for (const auto &hour : workHours) {
+      WorkingHours result = calculateDailyHours(row.day);
+
+      for (const auto &hour : result.hours) {
         SQLite::Statement queryInsert(db_, sqlDailyHours);
         queryInsert.bind(1, row.day);
         queryInsert.bind(2, hour);
         queryInsert.bind(3, row.session_id);
         queryInsert.exec();
+
+        // Accumulate daily total
+        dailyTotals[row.day] += hour;
+      }
+    }
+
+    // Insert break records for days with >= 6 hours
+    for (const auto &[date, total] : dailyTotals) {
+      if (total >= 6.0) {
+        SQLite::Statement queryBreak(db_, sqlBreak);
+        queryBreak.bind(1, date);
+        queryBreak.bind(2, -0.5);  // Negative 0.5 hours for break
+        queryBreak.exec();
       }
     }
 
